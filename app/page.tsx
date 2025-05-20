@@ -24,6 +24,7 @@ import { getAccounts } from "@/lib/userApi";
 import { Account, AccountType } from "@/types/account";
 import currency from "currency.js";
 import getSymbolFromCurrency from "currency-symbol-map";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const accountTypes: AccountType[] = [
   "SAVINGS",
@@ -61,93 +62,94 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container py-6">
-      <div className="grid gap-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
-            <p className="text-muted-foreground">
-              Manage your financial accounts and track your balances.
-            </p>
+    <ProtectedRoute>
+      <div className="container py-6">
+        <div className="grid gap-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
+              <p className="text-muted-foreground">
+                Manage your financial accounts and track your balances.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline">
+                <PiggyBank className="mr-2 h-4 w-4" />
+                Link Account
+              </Button>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Manual Account
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <PiggyBank className="mr-2 h-4 w-4" />
-              Link Account
-            </Button>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Manual Account
-            </Button>
-          </div>
-        </div>
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 md:w-auto">
-            <TabsTrigger value="all" onClick={() => setSelectedTab("all")}>
-              All Accounts
-            </TabsTrigger>
-            {accountTypes.map((type) => (
-              <TabsTrigger
-                key={type}
-                value={type.toLowerCase()}
-                onClick={() => setSelectedTab(type.toLowerCase())}
-              >
-                {type.charAt(0) + type.slice(1).toLowerCase()}
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-5 md:w-auto">
+              <TabsTrigger value="all" onClick={() => setSelectedTab("all")}>
+                All Accounts
               </TabsTrigger>
-            ))}
-          </TabsList>
+              {accountTypes.map((type) => (
+                <TabsTrigger
+                  key={type}
+                  value={type.toLowerCase()}
+                  onClick={() => setSelectedTab(type.toLowerCase())}
+                >
+                  {type.charAt(0) + type.slice(1).toLowerCase()}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          <TabsContent value="all" className="space-y-4 mt-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    All Accounts
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {getSymbolFromCurrency(
-                      accounts[0]?.currencyCode || "USD"
-                    ) || "$"}
-                    {getTotalForType().total}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {getTotalForType().count} accounts
-                  </p>
-                </CardContent>
-              </Card>
+            <TabsContent value="all" className="space-y-4 mt-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      All Accounts
+                    </CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {getSymbolFromCurrency(
+                        accounts[0]?.currencyCode || "USD"
+                      ) || "$"}
+                      {getTotalForType().total}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {getTotalForType().count} accounts
+                    </p>
+                  </CardContent>
+                </Card>
 
-              {accountTypes.map((type) => {
-                const totalData = getTotalForType(type);
-                return (
-                  <Card key={type}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {type.charAt(0) + type.slice(1).toLowerCase()}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {totalData.currencySymbol}
-                        {totalData.total}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {totalData.count} accounts
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                {accountTypes.map((type) => {
+                  const totalData = getTotalForType(type);
+                  return (
+                    <Card key={type}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          {type.charAt(0) + type.slice(1).toLowerCase()}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {totalData.currencySymbol}
+                          {totalData.total}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {totalData.count} accounts
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-            <h2 className="text-xl font-semibold mt-6 mb-4">Your Accounts</h2>
-            <div className="grid gap-4">
-              <AccountsList accounts={filteredAccounts} />
-            </div>
-          </TabsContent>
-          {/*<TabsContent value="banking" className="space-y-4 mt-4">
+              <h2 className="text-xl font-semibold mt-6 mb-4">Your Accounts</h2>
+              <div className="grid gap-4">
+                <AccountsList accounts={filteredAccounts} />
+              </div>
+            </TabsContent>
+            {/*<TabsContent value="banking" className="space-y-4 mt-4">
             <BankingAccounts />
           </TabsContent>
           <TabsContent value="credit" className="space-y-4 mt-4">
@@ -156,9 +158,10 @@ export default function DashboardPage() {
           <TabsContent value="investments" className="space-y-4 mt-4">
             <InvestmentAccounts />
           </TabsContent>*/}
-        </Tabs>
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
 

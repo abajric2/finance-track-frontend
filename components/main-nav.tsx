@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { DollarSign, PiggyBank, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { DollarSign, LogOut, PiggyBank, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "./mobile-nav";
+import { logoutUser } from "@/lib/userApi";
 
 export function MainNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
+  const handleLogout = () => {
+    logoutUser();
+    router.push("/login");
+  };
   return (
     <header className="sticky top-0 z-10 border-b bg-background px-10">
       <div className="container flex h-16 items-center justify-between py-4">
@@ -118,6 +124,15 @@ export function MainNav() {
             <Plus className="mr-2 h-4 w-4 sm:inline-block hidden" />
             <span className="sm:inline-block hidden">New Transaction</span>
             <Plus className="sm:hidden h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-2"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-5 w-5 text-white" />
+            <span className="sr-only">Logout</span>
           </Button>
         </div>
       </div>
