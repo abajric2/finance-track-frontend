@@ -103,65 +103,76 @@ export default function DashboardPage() {
               ))}
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4 mt-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      All Accounts
-                    </CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {getSymbolFromCurrency(
-                        accounts[0]?.currencyCode || "USD"
-                      ) || "$"}
-                      {getTotalForType().total}
+            {["all", ...accountTypes.map((t) => t.toLowerCase())].map((tab) => (
+              <TabsContent key={tab} value={tab} className="space-y-4 mt-4">
+                {tab === "all" && (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">
+                            All Accounts
+                          </CardTitle>
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">
+                            {getSymbolFromCurrency(
+                              accounts[0]?.currencyCode || "USD"
+                            ) || "$"}
+                            {getTotalForType().total}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {getTotalForType().count} accounts
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      {accountTypes.map((type) => {
+                        const totalData = getTotalForType(type);
+                        return (
+                          <Card key={type}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                              <CardTitle className="text-sm font-medium">
+                                {type.charAt(0) + type.slice(1).toLowerCase()}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">
+                                {totalData.currencySymbol}
+                                {totalData.total}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {totalData.count} accounts
+                              </p>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {getTotalForType().count} accounts
-                    </p>
-                  </CardContent>
-                </Card>
+                    <h2 className="text-xl font-semibold mt-6 mb-4">
+                      Your Accounts
+                    </h2>
+                  </>
+                )}
 
-                {accountTypes.map((type) => {
-                  const totalData = getTotalForType(type);
-                  return (
-                    <Card key={type}>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          {type.charAt(0) + type.slice(1).toLowerCase()}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          {totalData.currencySymbol}
-                          {totalData.total}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {totalData.count} accounts
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                {tab !== "all" && (
+                  <h2 className="text-xl font-semibold mt-2 mb-4">
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)} Accounts
+                  </h2>
+                )}
 
-              <h2 className="text-xl font-semibold mt-6 mb-4">Your Accounts</h2>
-              <div className="grid gap-4">
-                <AccountsList accounts={filteredAccounts} />
-              </div>
-            </TabsContent>
-            {/*<TabsContent value="banking" className="space-y-4 mt-4">
-            <BankingAccounts />
-          </TabsContent>
-          <TabsContent value="credit" className="space-y-4 mt-4">
-            <CreditCardAccounts />
-          </TabsContent>
-          <TabsContent value="investments" className="space-y-4 mt-4">
-            <InvestmentAccounts />
-          </TabsContent>*/}
+                <div className="grid gap-4">
+                  <AccountsList
+                    accounts={
+                      tab === "all"
+                        ? accounts
+                        : accounts.filter((a) => a.type === tab.toUpperCase())
+                    }
+                  />
+                </div>
+              </TabsContent>
+            ))}
           </Tabs>
         </div>
       </div>
@@ -195,146 +206,3 @@ function AccountsList({ accounts }: { accounts: Account[] }) {
     </div>
   );
 }
-
-/*function BankingAccounts() {
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Checking Account</CardTitle>
-          <CardDescription>Bank of America</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold">$5,240.12</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Available Balance</p>
-              <p className="text-lg font-semibold">$5,240.12</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Savings Account</CardTitle>
-          <CardDescription>Bank of America</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold">$7,410.33</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Interest Rate</p>
-              <p className="text-lg font-semibold">1.25% APY</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-}*/
-
-/*function CreditCardAccounts() {
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Visa Credit Card</CardTitle>
-          <CardDescription>Chase Bank</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold text-destructive">-$1,256.78</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Available Credit</p>
-              <p className="text-lg font-semibold">$8,743.22</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Mastercard Credit Card</CardTitle>
-          <CardDescription>Citibank</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold text-destructive">-$900.00</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Available Credit</p>
-              <p className="text-lg font-semibold">$4,100.00</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-}*/
-
-/*function InvestmentAccounts() {
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Investment Portfolio</CardTitle>
-          <CardDescription>Vanguard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Value</p>
-              <p className="text-2xl font-bold">$13,738.22</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Performance (YTD)</p>
-              <p className="text-lg font-semibold text-green-600">+12.4%</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Holdings
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-}*/
