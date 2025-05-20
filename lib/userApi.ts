@@ -1,4 +1,5 @@
 import { Account } from "@/types/account";
+import { CurrencyEntity } from "@/types/currency";
 import { UserResponse } from "@/types/user";
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/users`;
@@ -78,4 +79,49 @@ export function getCurrentUser(): UserResponse | null {
   if (typeof window === "undefined") return null;
   const user = localStorage.getItem("user");
   return user ? JSON.parse(user) : null;
+}
+
+export async function createAccount(accountData: {
+  name: string;
+  type: string;
+  balance: number;
+  currencyCode: string;
+  userId: number;
+}): Promise<Account> {
+  const res = await fetch(`${BASE_URL}/accounts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(accountData),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to create account: ${error}`);
+  }
+
+  const data: Account = await res.json();
+  return data;
+}
+
+let cachedCurrencies: CurrencyEntity[] | null = null;
+
+export async function getCurrencies(): Promise<CurrencyEntity[]> {
+  if (cachedCurrencies) return cachedCurrencies;
+
+  const res = await fetch(`${BASE_URL}/currencies`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch currencies: ${res.statusText}`);
+  }
+
+  const data: CurrencyEntity[] = await res.json();
+  cachedCurrencies = data;
+  return data;
 }

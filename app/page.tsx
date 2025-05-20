@@ -23,6 +23,7 @@ import { useEffect, useState } from "react";
 import { Account, AccountType } from "@/types/account";
 import currency from "currency.js";
 import getSymbolFromCurrency from "currency-symbol-map";
+import AddAccountModal from "@/components/AddAccountModal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 
@@ -36,6 +37,15 @@ const accountTypes: AccountType[] = [
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedTab, setSelectedTab] = useState<string>("all");
+  const [showModal, setShowModal] = useState(false);
+
+  const refreshAccounts = async () => {
+    const user = getCurrentUser();
+    if (user?.userId) {
+      const data = await getAccountsByUserId(user.userId);
+      setAccounts(data);
+    }
+  };
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -81,7 +91,7 @@ export default function DashboardPage() {
                 <PiggyBank className="mr-2 h-4 w-4" />
                 Link Account
               </Button>
-              <Button>
+              <Button onClick={() => setShowModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Manual Account
               </Button>
@@ -176,6 +186,11 @@ export default function DashboardPage() {
           </Tabs>
         </div>
       </div>
+      <AddAccountModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSuccess={refreshAccounts}
+      />
     </ProtectedRoute>
   );
 }
@@ -193,7 +208,11 @@ function AccountsList({ accounts }: { accounts: Account[] }) {
             <div className="flex flex-col justify-center">
               <p className="text-sm text-muted-foreground">Current Balance</p>
               <p className="text-2xl font-bold">
-                {getSymbolFromCurrency(acc.currencyCode) || acc.currencyCode}
+                {(() => {
+                  const code = acc.currencyEntity?.code ?? acc.currencyCode;
+                  return getSymbolFromCurrency(code) ?? code ?? "$";
+                })()}
+
                 {currency(acc.balance, { symbol: "", precision: 2 }).format()}
               </p>
             </div>
