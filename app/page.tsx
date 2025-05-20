@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowUpRight,
-  CreditCard,
-  DollarSign,
-  PiggyBank,
-  Plus,
-  Wallet,
-} from "lucide-react";
+import { DollarSign, PiggyBank, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +19,7 @@ import getSymbolFromCurrency from "currency-symbol-map";
 import AddAccountModal from "@/components/AddAccountModal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
+import ManageAccountModal from "@/components/ManageAccountModal";
 
 const accountTypes: AccountType[] = [
   "SAVINGS",
@@ -36,8 +30,8 @@ const accountTypes: AccountType[] = [
 
 export default function DashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedTab, setSelectedTab] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
   const refreshAccounts = async () => {
     const user = getCurrentUser();
@@ -56,11 +50,6 @@ export default function DashboardPage() {
         .catch((err) => console.error(err));
     }
   }, []);
-
-  const filteredAccounts =
-    selectedTab === "all"
-      ? accounts
-      : accounts.filter((a) => a.type === selectedTab.toUpperCase());
 
   const getTotalForType = (type?: AccountType) => {
     const filtered = type ? accounts.filter((a) => a.type === type) : accounts;
@@ -99,15 +88,9 @@ export default function DashboardPage() {
           </div>
           <Tabs defaultValue="all" className="w-full">
             <TabsList className="grid w-full grid-cols-5 md:w-auto">
-              <TabsTrigger value="all" onClick={() => setSelectedTab("all")}>
-                All Accounts
-              </TabsTrigger>
+              <TabsTrigger value="all">All Accounts</TabsTrigger>
               {accountTypes.map((type) => (
-                <TabsTrigger
-                  key={type}
-                  value={type.toLowerCase()}
-                  onClick={() => setSelectedTab(type.toLowerCase())}
-                >
+                <TabsTrigger key={type} value={type.toLowerCase()}>
                   {type.charAt(0) + type.slice(1).toLowerCase()}
                 </TabsTrigger>
               ))}
@@ -179,6 +162,8 @@ export default function DashboardPage() {
                         ? accounts
                         : accounts.filter((a) => a.type === tab.toUpperCase())
                     }
+                    onManage={(acc) => setSelectedAccount(acc)}
+                    refreshAccounts={refreshAccounts}
                   />
                 </div>
               </TabsContent>
@@ -191,11 +176,30 @@ export default function DashboardPage() {
         onClose={() => setShowModal(false)}
         onSuccess={refreshAccounts}
       />
+      {selectedAccount && (
+        <ManageAccountModal
+          open={!!selectedAccount}
+          onClose={() => setSelectedAccount(null)}
+          account={selectedAccount}
+          onSuccess={() => {
+            refreshAccounts();
+            setSelectedAccount(null);
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }
 
-function AccountsList({ accounts }: { accounts: Account[] }) {
+function AccountsList({
+  accounts,
+  onManage,
+  refreshAccounts,
+}: {
+  accounts: Account[];
+  onManage: (acc: Account) => void;
+  refreshAccounts: () => void;
+}) {
   return (
     <div className="grid gap-4">
       {accounts.map((acc) => (
@@ -212,13 +216,14 @@ function AccountsList({ accounts }: { accounts: Account[] }) {
                   const code = acc.currencyEntity?.code ?? acc.currencyCode;
                   return getSymbolFromCurrency(code) ?? code ?? "$";
                 })()}
-
                 {currency(acc.balance, { symbol: "", precision: 2 }).format()}
               </p>
             </div>
           </CardContent>
           <CardFooter className="flex justify-end">
-            <Button size="sm">Manage Account</Button>
+            <Button size="sm" onClick={() => onManage(acc)}>
+              Manage Account
+            </Button>
           </CardFooter>
         </Card>
       ))}

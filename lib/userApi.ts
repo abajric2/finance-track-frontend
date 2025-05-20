@@ -125,3 +125,30 @@ export async function getCurrencies(): Promise<CurrencyEntity[]> {
   cachedCurrencies = data;
   return data;
 }
+
+export async function updateAccount(account: Account): Promise<void> {
+  const res = await fetch(`${BASE_URL}/accounts/${account.accountId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: account.name,
+      type: account.type,
+      balance: account.balance,
+      currencyCode: account.currencyCode,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to update account");
+  }
+}
+
+export async function deleteAccount(accountId: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/accounts/${accountId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to delete account");
+  }
+}
