@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { DollarSign, PiggyBank, Plus } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { DollarSign, PiggyBank, Plus } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { MobileNav } from "./mobile-nav"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { MobileNav } from "./mobile-nav";
 
 export function MainNav() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-background">
+    <header className="sticky top-0 z-10 border-b bg-background px-10">
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2">
           <MobileNav />
@@ -24,7 +24,9 @@ export function MainNav() {
             href="/"
             className={cn(
               "text-sm font-medium",
-              pathname === "/" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Dashboard
@@ -33,7 +35,9 @@ export function MainNav() {
             href="/transactions"
             className={cn(
               "text-sm font-medium",
-              pathname === "/transactions" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/transactions"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Transactions
@@ -42,7 +46,9 @@ export function MainNav() {
             href="/recurring"
             className={cn(
               "text-sm font-medium",
-              pathname === "/recurring" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/recurring"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Recurring
@@ -51,7 +57,9 @@ export function MainNav() {
             href="/accounts"
             className={cn(
               "text-sm font-medium",
-              pathname.startsWith("/accounts") ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname.startsWith("/accounts")
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Accounts
@@ -60,7 +68,9 @@ export function MainNav() {
             href="/budgets"
             className={cn(
               "text-sm font-medium",
-              pathname === "/budgets" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/budgets"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Budgets
@@ -69,7 +79,9 @@ export function MainNav() {
             href="/goals"
             className={cn(
               "text-sm font-medium",
-              pathname === "/goals" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/goals"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Goals
@@ -78,7 +90,9 @@ export function MainNav() {
             href="/reports"
             className={cn(
               "text-sm font-medium",
-              pathname === "/reports" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/reports"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Reports
@@ -87,7 +101,9 @@ export function MainNav() {
             href="/settings"
             className={cn(
               "text-sm font-medium",
-              pathname === "/settings" ? "text-primary" : "text-muted-foreground hover:text-primary",
+              pathname === "/settings"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary"
             )}
           >
             Settings
@@ -106,6 +122,5 @@ export function MainNav() {
         </div>
       </div>
     </header>
-  )
+  );
 }
-

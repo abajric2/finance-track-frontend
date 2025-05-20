@@ -1,17 +1,74 @@
-import { ArrowUpRight, CreditCard, DollarSign, PiggyBank, Plus, Wallet } from "lucide-react"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  ArrowUpRight,
+  CreditCard,
+  DollarSign,
+  PiggyBank,
+  Plus,
+  Wallet,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect, useState } from "react";
+import { getAccounts } from "@/lib/userApi";
+import { Account, AccountType } from "@/types/account";
+import currency from "currency.js";
+import getSymbolFromCurrency from "currency-symbol-map";
+
+const accountTypes: AccountType[] = [
+  "SAVINGS",
+  "CHECKING",
+  "INVESTMENT",
+  "CREDIT",
+];
 
 export default function DashboardPage() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedTab, setSelectedTab] = useState<string>("all");
+
+  useEffect(() => {
+    getAccounts()
+      .then(setAccounts)
+      .catch((err) => console.error(err));
+  }, []);
+
+  const filteredAccounts =
+    selectedTab === "all"
+      ? accounts
+      : accounts.filter((a) => a.type === selectedTab.toUpperCase());
+
+  const getTotalForType = (type?: AccountType) => {
+    const filtered = type ? accounts.filter((a) => a.type === type) : accounts;
+    const total = filtered.reduce((acc, a) => acc + a.balance, 0);
+    return {
+      total: currency(total, { symbol: "", precision: 2 }).format(),
+      count: filtered.length,
+      currencySymbol: filtered[0]?.currencyCode
+        ? getSymbolFromCurrency(filtered[0].currencyCode) ||
+          filtered[0].currencyCode
+        : "$",
+    };
+  };
+
   return (
     <div className="container py-6">
       <div className="grid gap-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
-            <p className="text-muted-foreground">Manage your financial accounts and track your balances.</p>
+            <p className="text-muted-foreground">
+              Manage your financial accounts and track your balances.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline">
@@ -25,61 +82,72 @@ export default function DashboardPage() {
           </div>
         </div>
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 md:w-auto">
-            <TabsTrigger value="all">All Accounts</TabsTrigger>
-            <TabsTrigger value="banking">Banking</TabsTrigger>
-            <TabsTrigger value="credit">Credit Cards</TabsTrigger>
-            <TabsTrigger value="investments">Investments</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 md:w-auto">
+            <TabsTrigger value="all" onClick={() => setSelectedTab("all")}>
+              All Accounts
+            </TabsTrigger>
+            {accountTypes.map((type) => (
+              <TabsTrigger
+                key={type}
+                value={type.toLowerCase()}
+                onClick={() => setSelectedTab(type.toLowerCase())}
+              >
+                {type.charAt(0) + type.slice(1).toLowerCase()}
+              </TabsTrigger>
+            ))}
           </TabsList>
+
           <TabsContent value="all" className="space-y-4 mt-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    All Accounts
+                  </CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$24,231.89</div>
-                  <p className="text-xs text-muted-foreground">+$1,204.36 from last month</p>
+                  <div className="text-2xl font-bold">
+                    {getSymbolFromCurrency(
+                      accounts[0]?.currencyCode || "USD"
+                    ) || "$"}
+                    {getTotalForType().total}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {getTotalForType().count} accounts
+                  </p>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Cash & Banking</CardTitle>
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">$12,650.45</div>
-                  <p className="text-xs text-muted-foreground">3 accounts</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Credit Cards</CardTitle>
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">-$2,156.78</div>
-                  <p className="text-xs text-muted-foreground">2 accounts</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Investments</CardTitle>
-                  <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">$13,738.22</div>
-                  <p className="text-xs text-muted-foreground">+8.2% this month</p>
-                </CardContent>
-              </Card>
+
+              {accountTypes.map((type) => {
+                const totalData = getTotalForType(type);
+                return (
+                  <Card key={type}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        {type.charAt(0) + type.slice(1).toLowerCase()}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {totalData.currencySymbol}
+                        {totalData.total}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {totalData.count} accounts
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
+
             <h2 className="text-xl font-semibold mt-6 mb-4">Your Accounts</h2>
             <div className="grid gap-4">
-              <AccountsList />
+              <AccountsList accounts={filteredAccounts} />
             </div>
           </TabsContent>
-          <TabsContent value="banking" className="space-y-4 mt-4">
+          {/*<TabsContent value="banking" className="space-y-4 mt-4">
             <BankingAccounts />
           </TabsContent>
           <TabsContent value="credit" className="space-y-4 mt-4">
@@ -87,120 +155,41 @@ export default function DashboardPage() {
           </TabsContent>
           <TabsContent value="investments" className="space-y-4 mt-4">
             <InvestmentAccounts />
-          </TabsContent>
+          </TabsContent>*/}
         </Tabs>
       </div>
     </div>
-  )
+  );
 }
 
-function AccountsList() {
+function AccountsList({ accounts }: { accounts: Account[] }) {
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Checking Account</CardTitle>
-          <CardDescription>Bank of America</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
+    <div className="grid gap-4">
+      {accounts.map((acc) => (
+        <Card key={acc.accountId}>
+          <CardHeader className="pb-2">
+            <CardTitle>{acc.name}</CardTitle>
+            <CardDescription>{acc.type}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col justify-center">
               <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold">$5,240.12</p>
+              <p className="text-2xl font-bold">
+                {getSymbolFromCurrency(acc.currencyCode) || acc.currencyCode}
+                {currency(acc.balance, { symbol: "", precision: 2 }).format()}
+              </p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Available Balance</p>
-              <p className="text-lg font-semibold">$5,240.12</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Savings Account</CardTitle>
-          <CardDescription>Bank of America</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold">$7,410.33</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Interest Rate</p>
-              <p className="text-lg font-semibold">1.25% APY</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Visa Credit Card</CardTitle>
-          <CardDescription>Chase Bank</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold text-destructive">-$1,256.78</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Available Credit</p>
-              <p className="text-lg font-semibold">$8,743.22</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Transactions
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Investment Portfolio</CardTitle>
-          <CardDescription>Vanguard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Value</p>
-              <p className="text-2xl font-bold">$13,738.22</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Performance (YTD)</p>
-              <p className="text-lg font-semibold text-green-600">+12.4%</p>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
-            View Holdings
-          </Button>
-          <Button size="sm">Manage Account</Button>
-        </CardFooter>
-      </Card>
+          </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button size="sm">Manage Account</Button>
+          </CardFooter>
+        </Card>
+      ))}
     </div>
-  )
+  );
 }
 
-function BankingAccounts() {
+/*function BankingAccounts() {
   return (
     <div className="space-y-4">
       <Card>
@@ -253,10 +242,10 @@ function BankingAccounts() {
         </CardFooter>
       </Card>
     </div>
-  )
-}
+  );
+}*/
 
-function CreditCardAccounts() {
+/*function CreditCardAccounts() {
   return (
     <div className="space-y-4">
       <Card>
@@ -309,10 +298,10 @@ function CreditCardAccounts() {
         </CardFooter>
       </Card>
     </div>
-  )
-}
+  );
+}*/
 
-function InvestmentAccounts() {
+/*function InvestmentAccounts() {
   return (
     <div className="space-y-4">
       <Card>
@@ -340,6 +329,5 @@ function InvestmentAccounts() {
         </CardFooter>
       </Card>
     </div>
-  )
-}
-
+  );
+}*/
