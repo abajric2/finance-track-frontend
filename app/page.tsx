@@ -20,11 +20,11 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
-import { getAccounts } from "@/lib/userApi";
 import { Account, AccountType } from "@/types/account";
 import currency from "currency.js";
 import getSymbolFromCurrency from "currency-symbol-map";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 
 const accountTypes: AccountType[] = [
   "SAVINGS",
@@ -38,9 +38,13 @@ export default function DashboardPage() {
   const [selectedTab, setSelectedTab] = useState<string>("all");
 
   useEffect(() => {
-    getAccounts()
-      .then(setAccounts)
-      .catch((err) => console.error(err));
+    const user = getCurrentUser();
+
+    if (user?.userId) {
+      getAccountsByUserId(user.userId)
+        .then(setAccounts)
+        .catch((err) => console.error(err));
+    }
   }, []);
 
   const filteredAccounts =

@@ -57,3 +57,25 @@ export function logoutUser() {
     localStorage.removeItem("user");
   }
 }
+
+export async function getAccountsByUserId(userId: number): Promise<Account[]> {
+  const res = await fetch(`${BASE_URL}/accountsByUserId/${userId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch user accounts: ${res.statusText}`);
+  }
+
+  const data: Account[] = await res.json();
+  return data;
+}
+
+export function getCurrentUser(): UserResponse | null {
+  if (typeof window === "undefined") return null;
+  const user = localStorage.getItem("user");
+  return user ? JSON.parse(user) : null;
+}
