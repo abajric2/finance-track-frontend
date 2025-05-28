@@ -46,6 +46,8 @@ import { Transaction } from "@/types/transaction";
 import { getCategories, getTransactions } from "@/lib/transactionApi";
 import { getAccounts } from "@/lib/userApi";
 import AddTransactionModal from "@/components/AddTransactionModal";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 /*const transactions = [
   {
@@ -398,6 +400,17 @@ export default function TransactionsPage() {
         onSuccess={() => {
           fetchData();
         }}
+      />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
       />
     </div>
   );

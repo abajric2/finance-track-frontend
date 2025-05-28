@@ -21,6 +21,7 @@ import { Transaction } from "@/types/transaction";
 import { createTransaction, getCategories } from "@/lib/transactionApi";
 import { getAccounts } from "@/lib/userApi";
 import { v4 as uuidv4 } from "uuid";
+import { toast } from "react-toastify";
 
 interface Props {
   open: boolean;
@@ -65,6 +66,8 @@ export default function AddTransactionModal({
         periodicTransactionId: null,
       };
       await createTransaction(transaction);
+      toast.success("Transaction added successfully!");
+
       onSuccess();
       onClose();
     } catch (err) {
