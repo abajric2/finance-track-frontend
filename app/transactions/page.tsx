@@ -48,6 +48,7 @@ import { getAccounts } from "@/lib/userApi";
 import AddTransactionModal from "@/components/AddTransactionModal";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Label } from "recharts";
 
 /*const transactions = [
   {
@@ -125,6 +126,9 @@ export default function TransactionsPage() {
     Record<number, { name: string; type: string }>
   >({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showDateRange, setShowDateRange] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   async function fetchData() {
     try {
@@ -163,10 +167,66 @@ export default function TransactionsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDateRange(!showDateRange)}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               Date Range
             </Button>
+
+            {showDateRange && (
+              <div className="flex gap-4 items-center mt-4">
+                <div>
+                  <Label>From</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>To</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <Button
+                    onClick={() => {
+                      const filtered = transactions.filter((t) => {
+                        const tDate = new Date(t.date)
+                          .toISOString()
+                          .slice(0, 10);
+                        return (
+                          (!dateFrom || tDate >= dateFrom) &&
+                          (!dateTo || tDate <= dateTo)
+                        );
+                      });
+                      setTransactions(filtered);
+                      setShowDateRange(false);
+                    }}
+                  >
+                    Filter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                      fetchData(); // reload all
+                      setShowDateRange(false);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
