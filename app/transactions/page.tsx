@@ -1,23 +1,56 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Calendar, ChevronDown, DollarSign, Download, Filter, Plus, Search } from "lucide-react"
+import { useEffect, useState } from "react";
+import {
+  Calendar,
+  ChevronDown,
+  DollarSign,
+  Download,
+  Filter,
+  Plus,
+  Search,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Transaction } from "@/types/transaction";
+import { getCategories, getTransactions } from "@/lib/transactionApi";
+import { getAccounts } from "@/lib/userApi";
+import AddTransactionModal from "@/components/AddTransactionModal";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { Label } from "recharts";
 
-// Sample transaction data
-const transactions = [
+/*const transactions = [
   {
     id: "t1",
     date: "2023-06-15",
@@ -82,10 +115,46 @@ const transactions = [
     account: "Checking Account",
     amount: -1200.0,
   },
-]
+]*/
 
 export default function TransactionsPage() {
-  const [activeTab, setActiveTab] = useState("all")
+  const [activeTab, setActiveTab] = useState("all");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<
+    Record<number, { name: string; type: string }>
+  >({});
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showDateRange, setShowDateRange] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  async function fetchData() {
+    try {
+      setLoading(true);
+      const [transactionsData, categoriesData] = await Promise.all([
+        getTransactions(),
+        getCategories(),
+      ]);
+
+      const categoryMap: Record<number, { name: string; type: string }> = {};
+      categoriesData.forEach((c) => {
+        categoryMap[c.categoryId] = { name: c.name, type: c.type };
+      });
+
+      setCategories(categoryMap);
+      setTransactions(transactionsData);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <div className="container py-6">
@@ -93,14 +162,72 @@ export default function TransactionsPage() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-            <p className="text-muted-foreground">View and manage all your financial transactions.</p>
+            <p className="text-muted-foreground">
+              View and manage all your financial transactions.
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDateRange(!showDateRange)}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               Date Range
             </Button>
-            <Button size="sm">
+
+            {showDateRange && (
+              <div className="flex gap-4 items-center mt-4">
+                <div>
+                  <Label>From</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>To</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <Button
+                    onClick={() => {
+                      const filtered = transactions.filter((t) => {
+                        const tDate = new Date(t.date)
+                          .toISOString()
+                          .slice(0, 10);
+                        return (
+                          (!dateFrom || tDate >= dateFrom) &&
+                          (!dateTo || tDate <= dateTo)
+                        );
+                      });
+                      setTransactions(filtered);
+                      setShowDateRange(false);
+                    }}
+                  >
+                    Filter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                      fetchData(); // reload all
+                      setShowDateRange(false);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
             </Button>
@@ -113,20 +240,7 @@ export default function TransactionsPage() {
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search transactions..." className="pl-8" />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filter
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuCheckboxItem checked>All Transactions</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Income Only</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Expenses Only</DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
             <Select defaultValue="all-accounts">
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select account" />
@@ -157,7 +271,9 @@ export default function TransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>All Transactions</CardTitle>
-                <CardDescription>Showing all transactions from all accounts</CardDescription>
+                <CardDescription>
+                  Showing all transactions from all accounts
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -166,19 +282,32 @@ export default function TransactionsPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead>Account</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
                     {transactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{transaction.date}</TableCell>
+                      <TableRow key={transaction.transactionId}>
+                        <TableCell>
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </TableCell>
                         <TableCell>{transaction.description}</TableCell>
-                        <TableCell>{transaction.category}</TableCell>
-                        <TableCell>{transaction.account}</TableCell>
+                        <TableCell>
+                          {categories[transaction.categoryId]?.name ||
+                            "Unknown"}
+                        </TableCell>
+                        <TableCell>
+                          {categories[transaction.categoryId]?.type ||
+                            "Unknown"}
+                        </TableCell>
                         <TableCell
-                          className={`text-right ${transaction.amount < 0 ? "text-destructive" : "text-green-600"}`}
+                          className={`text-right ${
+                            transaction.amount < 0
+                              ? "text-destructive"
+                              : "text-green-600"
+                          }`}
                         >
                           ${Math.abs(transaction.amount).toFixed(2)}
                         </TableCell>
@@ -194,7 +323,9 @@ export default function TransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Income Transactions</CardTitle>
-                <CardDescription>Showing all income transactions</CardDescription>
+                <CardDescription>
+                  Showing all income transactions
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -209,14 +340,34 @@ export default function TransactionsPage() {
                   </TableHeader>
                   <TableBody>
                     {transactions
-                      .filter((t) => t.amount > 0)
+                      .filter(
+                        (t) =>
+                          categories[t.categoryId]?.type.toLowerCase() ===
+                          "income"
+                      )
                       .map((transaction) => (
-                        <TableRow key={transaction.id}>
-                          <TableCell>{transaction.date}</TableCell>
+                        <TableRow key={transaction.transactionId}>
+                          <TableCell>
+                            {new Date(transaction.date).toLocaleDateString()}
+                          </TableCell>
                           <TableCell>{transaction.description}</TableCell>
-                          <TableCell>{transaction.category}</TableCell>
-                          <TableCell>{transaction.account}</TableCell>
-                          <TableCell className="text-right text-green-600">${transaction.amount.toFixed(2)}</TableCell>
+                          <TableCell>
+                            {categories[transaction.categoryId]?.name ||
+                              "Unknown"}
+                          </TableCell>
+                          <TableCell>
+                            {categories[transaction.categoryId]?.type ||
+                              "Unknown"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${
+                              transaction.amount < 0
+                                ? "text-destructive"
+                                : "text-green-600"
+                            }`}
+                          >
+                            ${Math.abs(transaction.amount).toFixed(2)}
+                          </TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
@@ -229,7 +380,9 @@ export default function TransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Expense Transactions</CardTitle>
-                <CardDescription>Showing all expense transactions</CardDescription>
+                <CardDescription>
+                  Showing all expense transactions
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -244,14 +397,32 @@ export default function TransactionsPage() {
                   </TableHeader>
                   <TableBody>
                     {transactions
-                      .filter((t) => t.amount < 0)
+                      .filter(
+                        (t) =>
+                          categories[t.categoryId]?.type.toLowerCase() ===
+                          "expense"
+                      )
                       .map((transaction) => (
-                        <TableRow key={transaction.id}>
-                          <TableCell>{transaction.date}</TableCell>
+                        <TableRow key={transaction.transactionId}>
+                          <TableCell>
+                            {new Date(transaction.date).toLocaleDateString()}
+                          </TableCell>
                           <TableCell>{transaction.description}</TableCell>
-                          <TableCell>{transaction.category}</TableCell>
-                          <TableCell>{transaction.account}</TableCell>
-                          <TableCell className="text-right text-destructive">
+                          <TableCell>
+                            {categories[transaction.categoryId]?.name ||
+                              "Unknown"}
+                          </TableCell>
+                          <TableCell>
+                            {categories[transaction.categoryId]?.type ||
+                              "Unknown"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${
+                              transaction.amount < 0
+                                ? "text-destructive"
+                                : "text-green-600"
+                            }`}
+                          >
                             ${Math.abs(transaction.amount).toFixed(2)}
                           </TableCell>
                         </TableRow>
@@ -266,20 +437,41 @@ export default function TransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Pending Transactions</CardTitle>
-                <CardDescription>Showing all pending transactions</CardDescription>
+                <CardDescription>
+                  Showing all pending transactions
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-40 flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <DollarSign className="mx-auto h-12 w-12 mb-4 opacity-50" />
                   <p>No pending transactions</p>
-                  <p className="text-sm">All your transactions have been processed</p>
+                  <p className="text-sm">
+                    All your transactions have been processed
+                  </p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+      <AddTransactionModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          fetchData();
+        }}
+      />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
-  )
+  );
 }
-
