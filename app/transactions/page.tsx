@@ -19,12 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -44,11 +38,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Transaction } from "@/types/transaction";
 import { getCategories, getTransactions } from "@/lib/transactionApi";
-import { getAccounts } from "@/lib/userApi";
 import AddTransactionModal from "@/components/AddTransactionModal";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Label } from "recharts";
+import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 
 /*const transactions = [
   {
@@ -129,21 +123,47 @@ export default function TransactionsPage() {
   const [showDateRange, setShowDateRange] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+const [user, setUser] = useState<any>(null);
 
-  async function fetchData() {
+useEffect(() => {
+  const localUser = getCurrentUser();
+  if (localUser) {
+    setUser(localUser);
+  }
+}, []);
+
+useEffect(() => {
+  if (user) {
+    fetchData(user.userId);
+  }
+}, [user]);
+
+
+  async function fetchData(userId: number) {
     try {
+      console.log("aee")
       setLoading(true);
-      const [transactionsData, categoriesData] = await Promise.all([
-        getTransactions(),
-        getCategories(),
-      ]);
+
+      const [transactionsData, categoriesData, accountsData] =
+        await Promise.all([
+          getTransactions(),
+          getCategories(),
+          getAccountsByUserId(userId),
+        ]);
 
       const categoryMap: Record<number, { name: string; type: string }> = {};
       categoriesData.forEach((c) => {
         categoryMap[c.categoryId] = { name: c.name, type: c.type };
       });
 
+      const accountMap: Record<string, string> = {};
+      accountsData.forEach((a) => {
+        accountMap[a.accountUuid] = a.name;
+      });
+
       setCategories(categoryMap);
+      setAccounts(accountMap);
       setTransactions(transactionsData);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -152,9 +172,11 @@ export default function TransactionsPage() {
     }
   }
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+
+  const visibleTransactions =
+    selectedAccount === "all"
+      ? transactions
+      : transactions.filter((t) => t.accountUuid === selectedAccount);
 
   return (
     <div className="container py-6">
@@ -217,7 +239,8 @@ export default function TransactionsPage() {
                     onClick={() => {
                       setDateFrom("");
                       setDateTo("");
-                      fetchData(); // reload all
+                      if (user) fetchData(user.userId);
+
                       setShowDateRange(false);
                     }}
                   >
@@ -240,16 +263,17 @@ export default function TransactionsPage() {
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search transactions..." className="pl-8" />
             </div>
-
-            <Select defaultValue="all-accounts">
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select account" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all-accounts">All Accounts</SelectItem>
-                <SelectItem value="checking">Checking Account</SelectItem>
-                <SelectItem value="savings">Savings Account</SelectItem>
-                <SelectItem value="credit-card">Credit Card</SelectItem>
+                <SelectItem value="all">All Accounts</SelectItem>
+                {Object.entries(accounts).map(([uuid, name]) => (
+                  <SelectItem key={uuid} value={uuid}>
+                    {name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -282,13 +306,14 @@ export default function TransactionsPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Account</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody>
-                    {transactions.map((transaction) => (
+                    {visibleTransactions.map((transaction) => (
                       <TableRow key={transaction.transactionId}>
                         <TableCell>
                           {new Date(transaction.date).toLocaleDateString()}
@@ -297,6 +322,9 @@ export default function TransactionsPage() {
                         <TableCell>
                           {categories[transaction.categoryId]?.name ||
                             "Unknown"}
+                        </TableCell>
+                        <TableCell>
+                          {accounts[transaction.accountUuid] || "Unknown"}
                         </TableCell>
                         <TableCell>
                           {categories[transaction.categoryId]?.type ||
@@ -458,7 +486,8 @@ export default function TransactionsPage() {
         open={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
-          fetchData();
+          if (user) fetchData(user.userId);
+
         }}
       />
       <ToastContainer

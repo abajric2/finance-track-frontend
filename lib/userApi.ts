@@ -111,7 +111,7 @@ export async function updateAccount(account: Account): Promise<void> {
 }
 
 export async function deleteAccount(accountId: number): Promise<void> {
-  const res = await fetchWithAuth(`${BASE_URL}/accounts/${accountId}`, {
+  const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts/${accountId}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Failed to delete account");
