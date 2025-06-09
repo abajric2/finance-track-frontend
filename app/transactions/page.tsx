@@ -124,25 +124,25 @@ export default function TransactionsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
-const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-useEffect(() => {
-  const localUser = getCurrentUser();
-  if (localUser) {
-    setUser(localUser);
-  }
-}, []);
+  useEffect(() => {
+    const localUser = getCurrentUser();
+    if (localUser) {
+      setUser(localUser);
+    }
+  }, []);
 
-useEffect(() => {
-  if (user) {
-    fetchData(user.userId);
-  }
-}, [user]);
-
+  useEffect(() => {
+    if (user) {
+      fetchData(user.userId);
+    }
+  }, [user]);
 
   async function fetchData(userId: number) {
     try {
-      console.log("aee")
+      console.log("aee");
       setLoading(true);
 
       const [transactionsData, categoriesData, accountsData] =
@@ -172,11 +172,14 @@ useEffect(() => {
     }
   }
 
-
   const visibleTransactions =
     selectedAccount === "all"
       ? transactions
       : transactions.filter((t) => t.accountUuid === selectedAccount);
+
+  const filteredTransactions = visibleTransactions.filter((t) =>
+    t.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container py-6">
@@ -261,7 +264,12 @@ useEffect(() => {
           <div className="flex items-center gap-2">
             <div className="relative w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search transactions..." className="pl-8" />
+              <Input
+                placeholder="Search transactions..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger className="w-[180px]">
@@ -313,7 +321,7 @@ useEffect(() => {
                   </TableHeader>
 
                   <TableBody>
-                    {visibleTransactions.map((transaction) => (
+                    {filteredTransactions.map((transaction) => (
                       <TableRow key={transaction.transactionId}>
                         <TableCell>
                           {new Date(transaction.date).toLocaleDateString()}
@@ -487,7 +495,6 @@ useEffect(() => {
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
           if (user) fetchData(user.userId);
-
         }}
       />
       <ToastContainer
