@@ -41,7 +41,7 @@ import { getCategories, getTransactions } from "@/lib/transactionApi";
 import AddTransactionModal from "@/components/AddTransactionModal";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Label } from "recharts";
+import { Label } from "@/components/ui/label";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 
 /*const transactions = [
@@ -192,35 +192,41 @@ export default function TransactionsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDateRange(!showDateRange)}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Date Range
-            </Button>
-
+            {!showDateRange && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDateRange(true)}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Date Range
+              </Button>
+            )}
             {showDateRange && (
-              <div className="flex gap-4 items-center mt-4">
-                <div>
-                  <Label>From</Label>
+              <div className="flex flex-wrap md:flex-nowrap items-end gap-3 -mt-3">
+                <div className="flex flex-col">
+                  <Label htmlFor="dateFrom">From</Label>
                   <Input
+                    id="dateFrom"
                     type="date"
+                    className="h-10"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                   />
                 </div>
-                <div>
-                  <Label>To</Label>
+                <div className="flex flex-col">
+                  <Label htmlFor="dateTo">To</Label>
                   <Input
+                    id="dateTo"
                     type="date"
+                    className="h-10"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
                   />
                 </div>
-                <div className="flex gap-2 mt-6">
+                <div className="flex items-end gap-2">
                   <Button
+                    className="h-10"
                     onClick={() => {
                       const filtered = transactions.filter((t) => {
                         const tDate = new Date(t.date)
@@ -232,19 +238,18 @@ export default function TransactionsPage() {
                         );
                       });
                       setTransactions(filtered);
-                      setShowDateRange(false);
                     }}
                   >
                     Filter
                   </Button>
                   <Button
+                    className="h-10"
                     variant="outline"
                     onClick={() => {
                       setDateFrom("");
                       setDateTo("");
-                      if (user) fetchData(user.userId);
-
                       setShowDateRange(false);
+                      if (user) fetchData(user.userId);
                     }}
                   >
                     Reset
