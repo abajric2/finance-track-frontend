@@ -1,10 +1,11 @@
 import { Category } from "@/types/category";
 import { Transaction } from "@/types/transaction";
+import { fetchWithAuth } from "./fetchWithAuth";
 
-const TRANSACTION_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/transactions`;
+const TRANSACTION_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/transactions/api/transactions`;
 
 export async function getTransactions(): Promise<Transaction[]> {
-  const res = await fetch(`${TRANSACTION_URL}`, {
+  const res = await fetchWithAuth(`${TRANSACTION_URL}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -20,7 +21,7 @@ export async function getTransactions(): Promise<Transaction[]> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const res = await fetch(`${TRANSACTION_URL}/categories`);
+  const res = await fetchWithAuth(`${TRANSACTION_URL}/categories`);
   if (!res.ok) {
     throw new Error("Failed to fetch categories");
   }
@@ -29,7 +30,7 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function createTransaction(transaction: Partial<Transaction>) {
-  const res = await fetch(`${TRANSACTION_URL}`, {
+  const res = await fetchWithAuth(`${TRANSACTION_URL}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
