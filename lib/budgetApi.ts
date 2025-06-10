@@ -1,9 +1,12 @@
 import { BudgetResponse } from "@/types/budget";
 import { fetchWithAuth } from "./fetchWithAuth";
+import { CategoryDTO } from "@/types/budgetCategory";
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/budgets`;
 
-export async function getBudgetsByUserUuid(userUuid: string): Promise<BudgetResponse[]> {
+export async function getBudgetsByUserUuid(
+  userUuid: string
+): Promise<BudgetResponse[]> {
   const res = await fetchWithAuth(`${BASE_URL}/api/budgets/user/${userUuid}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch budgets for user: ${res.statusText}`);
@@ -11,7 +14,11 @@ export async function getBudgetsByUserUuid(userUuid: string): Promise<BudgetResp
   return await res.json();
 }
 
-export async function incrementCurrentAmount(budgetId: number, amountToAdd: number, currentAmount: number): Promise<BudgetResponse> {
+export async function incrementCurrentAmount(
+  budgetId: number,
+  amountToAdd: number,
+  currentAmount: number
+): Promise<BudgetResponse> {
   const updates = {
     currentAmount: amountToAdd + currentAmount,
   };
@@ -28,5 +35,13 @@ export async function incrementCurrentAmount(budgetId: number, amountToAdd: numb
     throw new Error(`Failed to update budget: ${res.statusText}`);
   }
 
+  return await res.json();
+}
+
+export async function getAllCategories(): Promise<CategoryDTO[]> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/categories`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch categories: ${res.statusText}`);
+  }
   return await res.json();
 }

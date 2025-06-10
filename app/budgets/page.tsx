@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpDown,
   ChevronDown,
@@ -53,28 +53,53 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { BudgetResponse } from "@/types/budget";
 import { getCurrentUser } from "@/lib/userApi";
-import { getBudgetsByUserUuid } from "@/lib/budgetApi";
+import { getAllCategories, getBudgetsByUserUuid } from "@/lib/budgetApi";
+import { CategoryDTO } from "@/types/budgetCategory";
 
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
   const [user, setUser] = useState<any>(null);
+  const [filter, setFilter] = useState<"all" | "over" | "under">("all");
 
   const handleShareBudget = (budgetName: string) => {
     setSelectedBudget(budgetName);
     setShowShareDialog(true);
   };
 
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
+
   useEffect(() => {
     const localUser = getCurrentUser();
     if (localUser) {
       setUser(localUser);
-      getBudgetsByUserUuid(localUser.userUuid)
-        .then(setBudgets)
-        .catch((err) => console.error("Failed to fetch budgets", err));
+
+      Promise.all([
+        getBudgetsByUserUuid(localUser.userUuid),
+        getAllCategories(),
+      ])
+        .then(([budgetsRes, categoriesRes]) => {
+          setBudgets(budgetsRes);
+          setCategories(categoriesRes);
+        })
+        .catch((err) => console.error("Failed to fetch data", err));
     }
   }, []);
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<number, string>();
+    categories.forEach((cat) => {
+      map.set(cat.categoryId, cat.name);
+    });
+    return map;
+  }, [categories]);
+
+  const overBudget = budgets.filter((b) => b.currentAmount > b.amount);
+  const underBudget = budgets.filter((b) => b.currentAmount <= b.amount);
+
+  const filteredBudgets =
+    filter === "all" ? budgets : filter === "over" ? overBudget : underBudget;
 
   return (
     <div className="container py-6">
@@ -118,13 +143,24 @@ export default function BudgetsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[200px]">
-                    <DropdownMenuCheckboxItem checked>
+                    <DropdownMenuCheckboxItem
+                      checked={filter === "all"}
+                      onCheckedChange={() => setFilter("all")}
+                    >
                       Show All
                     </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
+
+                    <DropdownMenuCheckboxItem
+                      checked={filter === "over"}
+                      onCheckedChange={() => setFilter("over")}
+                    >
                       Over Budget
                     </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>
+
+                    <DropdownMenuCheckboxItem
+                      checked={filter === "under"}
+                      onCheckedChange={() => setFilter("under")}
+                    >
                       Under Budget
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
@@ -137,19 +173,22 @@ export default function BudgetsPage() {
             </div>
 
             <div className="space-y-4">
-              {budgets.map((budget) => {
+              {filteredBudgets.map((budget) => {
                 const isOver = budget.currentAmount > budget.amount;
+                const categoryName =
+                  categoryMap.get(budget.categoryId) ?? "Unknown Category";
 
                 return (
                   <BudgetCategory
                     key={budget.budgetUuid}
-                    name={`Monthly - ${budget.amount} BAM`}
+                    category={`${categoryName} `}
                     spent={budget.currentAmount}
                     budget={budget.amount}
                     icon={<PiggyBank className="h-4 w-4" />}
                     overBudget={isOver}
                     onShare={() => handleShareBudget(budget.budgetUuid)}
                     isShared={budget.shared}
+                    period={budget.period}
                   />
                 );
               })}
@@ -477,14 +516,16 @@ function CustomLabel({
 }) {
   return (
     <label
-      htmlFor={htmlFor} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+      htmlFor={htmlFor}
+      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+    >
       {children}
     </label>
   );
 }
 
 interface BudgetCategoryProps {
-  name: string;
+  category: string;
   spent: number;
   budget: number;
   icon: React.ReactNode;
@@ -496,10 +537,11 @@ interface BudgetCategoryProps {
     email: string;
     avatar: string;
   }>;
+  period: string;
 }
 
 function BudgetCategory({
-  name,
+  category,
   spent,
   budget,
   icon,
@@ -507,6 +549,7 @@ function BudgetCategory({
   onShare,
   isShared = false,
   sharedWith = [],
+  period,
 }: BudgetCategoryProps) {
   const percentage = Math.min(Math.round((spent / budget) * 100), 100);
 
@@ -520,7 +563,7 @@ function BudgetCategory({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{name}</span>
+                <span className="font-medium">{category}</span>
                 {isShared && (
                   <Badge
                     variant="outline"
@@ -531,6 +574,7 @@ function BudgetCategory({
                   </Badge>
                 )}
               </div>
+              <p className="text-xs pb-1">{period}</p>
               <div className="text-xs text-muted-foreground">
                 ${spent.toFixed(2)} of ${budget.toFixed(2)}
               </div>
@@ -573,6 +617,7 @@ function BudgetCategory({
             </div>
           </div>
         </div>
+
         <Progress
           value={percentage}
           className={overBudget ? "bg-destructive/20" : ""}
