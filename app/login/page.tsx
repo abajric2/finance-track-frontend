@@ -13,11 +13,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/userApi";
+import { UserResponse } from "@/types/user";
 
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -32,14 +34,26 @@ export default function LoginPage() {
     }
 
     try {
-      await loginUser({
-        username: formData.identifier,
+      setLoading(true);
+      const user: UserResponse = await loginUser({
+        email: formData.identifier,
         password: formData.password,
       });
 
+      // ✅ Osiguraj da je user spašen u localStorage
+      const savedUser = localStorage.getItem("user");
+
+      if (!savedUser) {
+        setError("Something went wrong. Please try again.");
+        return;
+      }
+
+      console.log("✅ Login success:", user);
       router.push("/");
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,6 +72,7 @@ export default function LoginPage() {
               placeholder="your@email.com"
               onChange={handleChange}
               value={formData.identifier}
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -69,13 +84,14 @@ export default function LoginPage() {
               placeholder="••••••••"
               onChange={handleChange}
               value={formData.password}
+              disabled={loading}
             />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
         </CardContent>
         <CardFooter className="flex justify-between items-center">
-          <Button className="w-full" onClick={handleLogin}>
-            Login
+          <Button className="w-full" onClick={handleLogin} disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </Button>
         </CardFooter>
       </Card>

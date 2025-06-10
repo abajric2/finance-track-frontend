@@ -9,7 +9,7 @@ export default function ClientLayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const hideNav = pathname === "/login";
+  const hideNav = pathname === "/login" || pathname === "/register";
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">

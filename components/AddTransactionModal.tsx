@@ -19,9 +19,10 @@ import {
 import { useEffect, useState } from "react";
 import { Transaction } from "@/types/transaction";
 import { createTransaction, getCategories } from "@/lib/transactionApi";
-import { getAccounts } from "@/lib/userApi";
+import { getAccounts, getCurrentUser } from "@/lib/userApi";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
+import { getBudgetsByUserUuid, incrementCurrentAmount } from "@/lib/budgetApi";
 
 interface Props {
   open: boolean;
@@ -40,38 +41,76 @@ export default function AddTransactionModal({
     date: new Date().toISOString().slice(0, 10),
     categoryId: "",
     accountUuid: "",
+    budgetUuid: "",
   });
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
       getCategories().then(setCategories);
       getAccounts().then(setAccounts);
+
+      (async () => {
+        const user = getCurrentUser();
+        if (!user) {
+          toast.error("User not found. Please log in again.");
+          return;
+        }
+
+        try {
+          const budgets = await getBudgetsByUserUuid(user.userUuid);
+          setBudgets(budgets);
+        } catch (err) {
+          console.error("Failed to fetch budgets:", err);
+          toast.error("Could not load budgets.");
+        }
+      })();
     }
   }, [open]);
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      const selectedBudget = budgets.find(
+        (b: any) => b.budgetUuid === formData.budgetUuid
+      );
+
+      if (!selectedBudget) {
+        toast.error("Selected budget not found.");
+        return;
+      }
+
+      const amount = parseFloat(formData.amount);
+
       const transaction: Omit<Transaction, "transactionId"> = {
         transactionUuid: uuidv4(),
         accountUuid: formData.accountUuid as any,
-        amount: parseFloat(formData.amount),
+        amount,
         date: formData.date,
         description: formData.description,
         categoryId: parseInt(formData.categoryId),
-        budgetUuid: uuidv4(),
+        budgetUuid: formData.budgetUuid,
         periodicTransactionId: null,
       };
+
       await createTransaction(transaction);
+
+      await incrementCurrentAmount(
+        selectedBudget.budgetId,
+        amount,
+        selectedBudget.currentAmount
+      );
+
       toast.success("Transaction added successfully!");
 
       onSuccess();
       onClose();
     } catch (err) {
       console.error("Error creating transaction:", err);
+      toast.error("Failed to create transaction.");
     } finally {
       setLoading(false);
     }
@@ -110,6 +149,7 @@ export default function AddTransactionModal({
             <Input
               type="date"
               value={formData.date}
+              max={new Date().toISOString().split("T")[0]}
               onChange={(e) =>
                 setFormData({ ...formData, date: e.target.value })
               }
@@ -158,6 +198,27 @@ export default function AddTransactionModal({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>Budget</Label>
+            <Select
+              value={formData.budgetUuid}
+              onValueChange={(value) =>
+                setFormData({ ...formData, budgetUuid: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select budget" />
+              </SelectTrigger>
+              <SelectContent>
+                {budgets.map((budget) => (
+                  <SelectItem key={budget.budgetUuid} value={budget.budgetUuid}>
+                    {budget.period} – {budget.amount} BAM
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button onClick={handleSubmit} disabled={loading} className="w-full">
             {loading ? "Adding..." : "Add Transaction"}
           </Button>

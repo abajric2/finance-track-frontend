@@ -1,22 +1,23 @@
 import { Account } from "@/types/account";
 import { CurrencyEntity } from "@/types/currency";
 import { UserResponse } from "@/types/user";
+import { fetchWithAuth } from "./fetchWithAuth";
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/users`;
 
 export async function loginUser({
-  username,
+  email,
   password,
 }: {
-  username: string;
+  email: string;
   password: string;
 }): Promise<UserResponse> {
-  const res = await fetch(`${BASE_URL}/login`, {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {
@@ -24,61 +25,63 @@ export async function loginUser({
     throw new Error(`Login failed: ${error}`);
   }
 
-  const data: UserResponse | null = await res.json();
+  const data: any = await res.json();
 
-  if (!data || !data.userId) {
-    throw new Error("Login failed: Invalid user data.");
+  if (!data?.accessToken || !data?.refreshToken) {
+    throw new Error("Login failed: Invalid response data.");
   }
 
-  if (typeof window !== "undefined") {
-    localStorage.setItem("user", JSON.stringify(data));
+  if (typeof window === "undefined") {
+    throw new Error("Login must be performed in the browser.");
   }
 
-  return data;
+  localStorage.setItem("accessToken", data.accessToken);
+  localStorage.setItem("refreshToken", data.refreshToken);
+  localStorage.setItem("user", JSON.stringify(data));
+
+  // 🔓 Decode token to extract email
+  const base64Url = data.accessToken.split(".")[1];
+  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+  const jsonPayload = decodeURIComponent(
+    atob(base64)
+      .split("")
+      .map((c) => `%${("00" + c.charCodeAt(0).toString(16)).slice(-2)}`)
+      .join("")
+  );
+
+  const decoded = JSON.parse(jsonPayload);
+  console.log("ojj ", decoded);
+
+  const userEmail = decoded.sub;
+
+  const userRes = await fetchWithAuth(
+    `${BASE_URL}/api/users/email/${userEmail}`
+  );
+
+  if (!userRes.ok) {
+    throw new Error(`Failed to fetch user by email: ${userRes.statusText}`);
+  }
+
+  const user: UserResponse = await userRes.json();
+
+  localStorage.setItem("user", JSON.stringify(user));
+
+  return user;
 }
 
 export async function getAccounts(): Promise<Account[]> {
-  const res = await fetch(`${BASE_URL}/accounts`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch accounts: ${res.statusText}`);
-  }
-
-  const data: Account[] = await res.json();
-  return data;
-}
-
-export function logoutUser() {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("user");
-  }
+  const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts`);
+  if (!res.ok) throw new Error(`Failed to fetch accounts: ${res.statusText}`);
+  return await res.json();
 }
 
 export async function getAccountsByUserId(userId: number): Promise<Account[]> {
-  const res = await fetch(`${BASE_URL}/accountsByUserId/${userId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!res.ok) {
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/users/accountsByUserId/${userId}`
+  );
+  if (!res.ok)
     throw new Error(`Failed to fetch user accounts: ${res.statusText}`);
-  }
-
-  const data: Account[] = await res.json();
-  return data;
-}
-
-export function getCurrentUser(): UserResponse | null {
-  if (typeof window === "undefined") return null;
-  const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
+  return await res.json();
 }
 
 export async function createAccount(accountData: {
@@ -88,67 +91,88 @@ export async function createAccount(accountData: {
   currencyCode: string;
   userId: number;
 }): Promise<Account> {
-  const res = await fetch(`${BASE_URL}/accounts`, {
+  const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(accountData),
   });
+  if (!res.ok) throw new Error(`Failed to create account: ${await res.text()}`);
+  return await res.json();
+}
 
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(`Failed to create account: ${error}`);
-  }
+export async function updateAccount(account: Account): Promise<void> {
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/users/accounts/${account.accountId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: account.name,
+        type: account.type,
+        balance: account.balance,
+        currencyCode: account.currencyCode,
+      }),
+    }
+  );
+  if (!res.ok) throw new Error("Failed to update account");
+}
 
-  const data: Account = await res.json();
-  return data;
+export async function deleteAccount(accountId: number): Promise<void> {
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/users/accounts/${accountId}`,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!res.ok) throw new Error("Failed to delete account");
 }
 
 let cachedCurrencies: CurrencyEntity[] | null = null;
 
 export async function getCurrencies(): Promise<CurrencyEntity[]> {
   if (cachedCurrencies) return cachedCurrencies;
-
-  const res = await fetch(`${BASE_URL}/currencies`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch currencies: ${res.statusText}`);
-  }
-
-  const data: CurrencyEntity[] = await res.json();
+  const res = await fetchWithAuth(`${BASE_URL}/api/users/currencies`);
+  if (!res.ok) throw new Error(`Failed to fetch currencies: ${res.statusText}`);
+  const data = await res.json();
   cachedCurrencies = data;
   return data;
 }
 
-export async function updateAccount(account: Account): Promise<void> {
-  const res = await fetch(`${BASE_URL}/accounts/${account.accountId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+export function logoutUser() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+  }
+}
+
+export function getCurrentUser(): UserResponse | null {
+  if (typeof window === "undefined") return null;
+  const user = localStorage.getItem("user");
+  return user ? JSON.parse(user) : null;
+}
+
+export async function registerUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role?: string;
+  dateOfBirth: string;
+  country: string;
+  currency?: string;
+}): Promise<void> {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
-      name: account.name,
-      type: account.type,
-      balance: account.balance,
-      currencyCode: account.currencyCode,
+      ...data,
+      role: data.role ?? "FREE",
+      currency: data.currency ?? "USD",
     }),
   });
 
   if (!res.ok) {
-    throw new Error("Failed to update account");
-  }
-}
-
-export async function deleteAccount(accountId: number): Promise<void> {
-  const res = await fetch(`${BASE_URL}/accounts/${accountId}`, {
-    method: "DELETE",
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to delete account");
+    const error = await res.text();
+    throw new Error(`Registration failed: ${error}`);
   }
 }
