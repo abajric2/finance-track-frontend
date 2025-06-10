@@ -37,8 +37,7 @@ export async function loginUser({
 
   localStorage.setItem("accessToken", data.accessToken);
   localStorage.setItem("refreshToken", data.refreshToken);
-  localStorage.setItem("user", JSON.stringify(data))
-
+  localStorage.setItem("user", JSON.stringify(data));
 
   // 🔓 Decode token to extract email
   const base64Url = data.accessToken.split(".")[1];
@@ -51,11 +50,13 @@ export async function loginUser({
   );
 
   const decoded = JSON.parse(jsonPayload);
-    console.log("ojj ",decoded)
+  console.log("ojj ", decoded);
 
   const userEmail = decoded.sub;
 
-  const userRes = await fetchWithAuth(`${BASE_URL}/api/users/email/${userEmail}`);
+  const userRes = await fetchWithAuth(
+    `${BASE_URL}/api/users/email/${userEmail}`
+  );
 
   if (!userRes.ok) {
     throw new Error(`Failed to fetch user by email: ${userRes.statusText}`);
@@ -68,8 +69,6 @@ export async function loginUser({
   return user;
 }
 
-
-
 export async function getAccounts(): Promise<Account[]> {
   const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts`);
   if (!res.ok) throw new Error(`Failed to fetch accounts: ${res.statusText}`);
@@ -77,8 +76,11 @@ export async function getAccounts(): Promise<Account[]> {
 }
 
 export async function getAccountsByUserId(userId: number): Promise<Account[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/api/users/accountsByUserId/${userId}`);
-  if (!res.ok) throw new Error(`Failed to fetch user accounts: ${res.statusText}`);
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/users/accountsByUserId/${userId}`
+  );
+  if (!res.ok)
+    throw new Error(`Failed to fetch user accounts: ${res.statusText}`);
   return await res.json();
 }
 
@@ -98,22 +100,28 @@ export async function createAccount(accountData: {
 }
 
 export async function updateAccount(account: Account): Promise<void> {
-  const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts/${account.accountId}`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      name: account.name,
-      type: account.type,
-      balance: account.balance,
-      currencyCode: account.currencyCode,
-    }),
-  });
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/users/accounts/${account.accountId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: account.name,
+        type: account.type,
+        balance: account.balance,
+        currencyCode: account.currencyCode,
+      }),
+    }
+  );
   if (!res.ok) throw new Error("Failed to update account");
 }
 
 export async function deleteAccount(accountId: number): Promise<void> {
-  const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts/${accountId}`, {
-    method: "DELETE",
-  });
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/users/accounts/${accountId}`,
+    {
+      method: "DELETE",
+    }
+  );
   if (!res.ok) throw new Error("Failed to delete account");
 }
 
@@ -140,4 +148,31 @@ export function getCurrentUser(): UserResponse | null {
   if (typeof window === "undefined") return null;
   const user = localStorage.getItem("user");
   return user ? JSON.parse(user) : null;
+}
+
+export async function registerUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role?: string;
+  dateOfBirth: string;
+  country: string;
+  currency?: string;
+}): Promise<void> {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ...data,
+      role: data.role ?? "FREE",
+      currency: data.currency ?? "USD",
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Registration failed: ${error}`);
+  }
 }
