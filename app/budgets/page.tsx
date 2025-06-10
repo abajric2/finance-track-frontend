@@ -55,6 +55,22 @@ import { BudgetResponse } from "@/types/budget";
 import { getCurrentUser } from "@/lib/userApi";
 import { getAllCategories, getBudgetsByUserUuid } from "@/lib/budgetApi";
 import { CategoryDTO } from "@/types/budgetCategory";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import ManageCategoriesModal from "@/components/ManageCategoriesModal";
+import { ToastContainer } from "react-toastify";
 
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -62,13 +78,30 @@ export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
   const [user, setUser] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
+  const [open, setOpen] = useState(false);
+  const [categories, setCategories] = useState<CategoryDTO[]>([]);
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
+  const categoryMap = useMemo(() => {
+    const map = new Map<number, string>();
+    categories.forEach((cat) => {
+      map.set(cat.categoryId, cat.name);
+    });
+    return map;
+  }, [categories]);
+
+  const selectedCategoryName =
+    selectedCategoryId !== null
+      ? categoryMap.get(selectedCategoryId)
+      : "All Categories";
 
   const handleShareBudget = (budgetName: string) => {
     setSelectedBudget(budgetName);
     setShowShareDialog(true);
   };
-
-  const [categories, setCategories] = useState<CategoryDTO[]>([]);
 
   useEffect(() => {
     const localUser = getCurrentUser();
@@ -86,14 +119,6 @@ export default function BudgetsPage() {
         .catch((err) => console.error("Failed to fetch data", err));
     }
   }, []);
-
-  const categoryMap = useMemo(() => {
-    const map = new Map<number, string>();
-    categories.forEach((cat) => {
-      map.set(cat.categoryId, cat.name);
-    });
-    return map;
-  }, [categories]);
 
   const overBudget = budgets.filter((b) => b.currentAmount > b.amount);
   const underBudget = budgets.filter((b) => b.currentAmount <= b.amount);
@@ -129,34 +154,29 @@ export default function BudgetsPage() {
 
           <TabsContent value="categories" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="relative w-64">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search categories..." className="pl-8" />
-                </div>
+              <div className="flex items-center gap-4">
+                {/* Filter: Over / Under / All */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-10">
                       <Filter className="mr-2 h-4 w-4" />
-                      Filter
+                      Budget Filter
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[200px]">
+                  <DropdownMenuContent align="start" className="w-[200px]">
                     <DropdownMenuCheckboxItem
                       checked={filter === "all"}
                       onCheckedChange={() => setFilter("all")}
                     >
                       Show All
                     </DropdownMenuCheckboxItem>
-
                     <DropdownMenuCheckboxItem
                       checked={filter === "over"}
                       onCheckedChange={() => setFilter("over")}
                     >
                       Over Budget
                     </DropdownMenuCheckboxItem>
-
                     <DropdownMenuCheckboxItem
                       checked={filter === "under"}
                       onCheckedChange={() => setFilter("under")}
@@ -165,33 +185,92 @@ export default function BudgetsPage() {
                     </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-64 justify-between"
+                    >
+                      {selectedCategoryName}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-0">
+                    <Command>
+                      <CommandInput placeholder="Filter by category..." />
+                      <CommandList>
+                        <CommandEmpty>No categories found.</CommandEmpty>
+                        <CommandGroup heading="Categories">
+                          <CommandItem
+                            onSelect={() => {
+                              setSelectedCategoryId(null);
+                              setOpen(false);
+                            }}
+                          >
+                            All Categories
+                          </CommandItem>
+                          {Array.from(categoryMap.entries()).map(
+                            ([id, name]) => (
+                              <CommandItem
+                                key={id}
+                                onSelect={() => {
+                                  setSelectedCategoryId(id);
+                                  setOpen(false);
+                                }}
+                                className={
+                                  selectedCategoryId === id ? "bg-muted" : ""
+                                }
+                              >
+                                {name}
+                              </CommandItem>
+                            )
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsManageCategoriesOpen(true)}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 Manage Categories
               </Button>
             </div>
 
+            {/* Budgets list */}
             <div className="space-y-4">
-              {filteredBudgets.map((budget) => {
-                const isOver = budget.currentAmount > budget.amount;
-                const categoryName =
-                  categoryMap.get(budget.categoryId) ?? "Unknown Category";
+              {filteredBudgets
+                .filter((budget) =>
+                  selectedCategoryId
+                    ? budget.categoryId === selectedCategoryId
+                    : true
+                )
+                .map((budget) => {
+                  const isOver = budget.currentAmount > budget.amount;
+                  const categoryName =
+                    categoryMap.get(budget.categoryId) ?? "Unknown Category";
 
-                return (
-                  <BudgetCategory
-                    key={budget.budgetUuid}
-                    category={`${categoryName} `}
-                    spent={budget.currentAmount}
-                    budget={budget.amount}
-                    icon={<PiggyBank className="h-4 w-4" />}
-                    overBudget={isOver}
-                    onShare={() => handleShareBudget(budget.budgetUuid)}
-                    isShared={budget.shared}
-                    period={budget.period}
-                  />
-                );
-              })}
+                  return (
+                    <BudgetCategory
+                      key={budget.budgetUuid}
+                      category={categoryName}
+                      spent={budget.currentAmount}
+                      budget={budget.amount}
+                      icon={<PiggyBank className="h-4 w-4" />}
+                      overBudget={isOver}
+                      onShare={() => handleShareBudget(budget.budgetUuid)}
+                      isShared={budget.shared}
+                      period={budget.period}
+                    />
+                  );
+                })}
             </div>
           </TabsContent>
 
@@ -503,6 +582,26 @@ export default function BudgetsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ManageCategoriesModal
+        open={isManageCategoriesOpen}
+        onClose={() => setIsManageCategoriesOpen(false)}
+        onSuccess={() => {
+          // Osveži podatke ako je potrebno
+          console.log("Category successfully created!");
+        }}
+      />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

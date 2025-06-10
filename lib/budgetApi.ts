@@ -45,3 +45,22 @@ export async function getAllCategories(): Promise<CategoryDTO[]> {
   }
   return await res.json();
 }
+
+export async function createCategory(data: {
+  name: string;
+  type: string;
+}): Promise<CategoryDTO> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to create category: ${res.statusText}`);
+  }
+
+  return await res.json();
+}
