@@ -71,16 +71,20 @@ import {
 } from "@/components/ui/popover";
 import ManageCategoriesModal from "@/components/ManageCategoriesModal";
 import { ToastContainer } from "react-toastify";
+import CreateBudgetModal from "@/components/CreateBudgetModal";
+import { UserResponse } from "@/types/user";
+import { SharedBudgetCard } from "@/components/SharedBudgetCard";
 
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserResponse | null>(null);
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
@@ -126,6 +130,14 @@ export default function BudgetsPage() {
   const filteredBudgets =
     filter === "all" ? budgets : filter === "over" ? overBudget : underBudget;
 
+  const sharedByYou = budgets.filter(
+    (budget) => budget.shared && budget.owner === user?.userUuid
+  );
+
+  const sharedWithYou = budgets.filter(
+    (budget) => budget.shared && budget.owner !== user?.userUuid
+  );
+
   return (
     <div className="container py-6">
       <div className="grid gap-6">
@@ -137,7 +149,7 @@ export default function BudgetsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button>
+            <Button onClick={() => setIsCreateBudgetOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create Budget
             </Button>
@@ -383,99 +395,40 @@ export default function BudgetsPage() {
                     <TabsTrigger value="with-you">Shared with You</TabsTrigger>
                   </TabsList>
                   <TabsContent value="by-you" className="mt-4 space-y-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h3 className="font-medium">Housing</h3>
-                          <p className="text-sm text-muted-foreground">
-                            $1,200 of $1,500
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-2">
-                            <Avatar className="border-2 border-background h-8 w-8">
-                              <AvatarImage
-                                src="/avatars/01.png"
-                                alt="Sarah Johnson"
-                              />
-                              <AvatarFallback>SJ</AvatarFallback>
-                            </Avatar>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            <Share2 className="mr-2 h-4 w-4" />
-                            Manage
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h3 className="font-medium">Entertainment</h3>
-                          <p className="text-sm text-muted-foreground">
-                            $420 of $300
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-2">
-                            <Avatar className="border-2 border-background h-8 w-8">
-                              <AvatarImage
-                                src="/avatars/02.png"
-                                alt="Mike Smith"
-                              />
-                              <AvatarFallback>MS</AvatarFallback>
-                            </Avatar>
-                            <Avatar className="border-2 border-background h-8 w-8">
-                              <AvatarImage
-                                src="/avatars/03.png"
-                                alt="Emma Davis"
-                              />
-                              <AvatarFallback>ED</AvatarFallback>
-                            </Avatar>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            <Share2 className="mr-2 h-4 w-4" />
-                            Manage
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    {sharedByYou.map((budget) => {
+                      const categoryName =
+                        categoryMap.get(budget.categoryId) ??
+                        "Unknown Category";
+                      return (
+                        <SharedBudgetCard
+                          key={budget.budgetId}
+                          category={categoryName}
+                          spent={budget.currentAmount}
+                          budget={budget.amount}
+                          isShared={true}
+                          period={budget.period}
+                        />
+                      );
+                    })}
                   </TabsContent>
+
                   <TabsContent value="with-you" className="mt-4 space-y-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h3 className="font-medium">Vacation Fund</h3>
-                          <p className="text-sm text-muted-foreground">
-                            $850 of $2,000
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Shared by John Doe
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">View Only</Badge>
-                          <Button variant="outline" size="sm">
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h3 className="font-medium">Household Expenses</h3>
-                          <p className="text-sm text-muted-foreground">
-                            $1,450 of $2,000
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Shared by Lisa Wong
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">Edit Access</Badge>
-                          <Button variant="outline" size="sm">
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    {sharedWithYou.map((budget) => {
+                      const categoryName =
+                        categoryMap.get(budget.categoryId) ??
+                        "Unknown Category";
+                      return (
+                        <SharedBudgetCard
+                          key={budget.budgetId}
+                          category={categoryName}
+                          spent={budget.currentAmount}
+                          budget={budget.amount}
+                          isShared={true}
+                          readonly={true}
+                          period={budget.period}
+                        />
+                      );
+                    })}
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -586,8 +539,14 @@ export default function BudgetsPage() {
         open={isManageCategoriesOpen}
         onClose={() => setIsManageCategoriesOpen(false)}
         onSuccess={() => {
-          // Osveži podatke ako je potrebno
           console.log("Category successfully created!");
+        }}
+      />
+      <CreateBudgetModal
+        open={isCreateBudgetOpen}
+        onClose={() => setIsCreateBudgetOpen(false)}
+        onSuccess={() => {
+          getBudgetsByUserUuid(user!.userUuid).then(setBudgets);
         }}
       />
       <ToastContainer

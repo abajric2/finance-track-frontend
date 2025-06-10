@@ -64,3 +64,53 @@ export async function createCategory(data: {
 
   return await res.json();
 }
+
+export async function createBudget(data: {
+  owner: string; // UUID
+  amount: number;
+  period: string;
+  categoryId: number;
+  startDate?: Date;
+  endDate?: Date | null;
+}): Promise<BudgetResponse> {
+  const now = new Date();
+
+  const budgetPayload = {
+    owner: data.owner,
+    amount: data.amount,
+    currentAmount: 0,
+    shared: false,
+    period: data.period,
+    startDate: (data.startDate ?? now).toISOString(),
+    endDate: data.endDate ? data.endDate.toISOString() : null,
+    categoryId: data.categoryId,
+    budgetUsers: [],
+  };
+
+  const budgetRes = await fetchWithAuth(`${BASE_URL}/api/budgets`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(budgetPayload),
+  });
+
+  if (!budgetRes.ok) {
+    throw new Error(`Failed to create budget: ${budgetRes.statusText}`);
+  }
+
+  const createdBudget: BudgetResponse = await budgetRes.json();
+
+  const userRes = await fetchWithAuth(
+    `${BASE_URL}/api/budgets/${createdBudget.budgetId}/users?userUuid=${data.owner}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!userRes.ok) {
+    throw new Error(`Failed to assign user to budget: ${userRes.statusText}`);
+  }
+
+  return createdBudget;
+}
