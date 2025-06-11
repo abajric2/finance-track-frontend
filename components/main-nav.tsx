@@ -116,15 +116,6 @@ export function MainNav() {
           </Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="hidden sm:flex">
-            <PiggyBank className="mr-2 h-4 w-4" />
-            Add Account
-          </Button>
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4 sm:inline-block hidden" />
-            <span className="sm:inline-block hidden">New Transaction</span>
-            <Plus className="sm:hidden h-4 w-4" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"

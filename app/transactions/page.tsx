@@ -43,73 +43,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Label } from "@/components/ui/label";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
-
-/*const transactions = [
-  {
-    id: "t1",
-    date: "2023-06-15",
-    description: "Grocery Store",
-    category: "Groceries",
-    account: "Checking Account",
-    amount: -120.45,
-  },
-  {
-    id: "t2",
-    date: "2023-06-14",
-    description: "Salary Deposit",
-    category: "Income",
-    account: "Checking Account",
-    amount: 2500.0,
-  },
-  {
-    id: "t3",
-    date: "2023-06-12",
-    description: "Electric Bill",
-    category: "Utilities",
-    account: "Checking Account",
-    amount: -85.2,
-  },
-  {
-    id: "t4",
-    date: "2023-06-10",
-    description: "Restaurant",
-    category: "Dining",
-    account: "Credit Card",
-    amount: -64.3,
-  },
-  {
-    id: "t5",
-    date: "2023-06-08",
-    description: "Gas Station",
-    category: "Transportation",
-    account: "Credit Card",
-    amount: -45.0,
-  },
-  {
-    id: "t6",
-    date: "2023-06-05",
-    description: "Online Shopping",
-    category: "Shopping",
-    account: "Credit Card",
-    amount: -129.99,
-  },
-  {
-    id: "t7",
-    date: "2023-06-03",
-    description: "Gym Membership",
-    category: "Health & Fitness",
-    account: "Checking Account",
-    amount: -50.0,
-  },
-  {
-    id: "t8",
-    date: "2023-06-01",
-    description: "Rent Payment",
-    category: "Housing",
-    account: "Checking Account",
-    amount: -1200.0,
-  },
-]*/
+import { UserResponse } from "@/types/user";
 
 export default function TransactionsPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -124,7 +58,7 @@ export default function TransactionsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserResponse | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -147,7 +81,7 @@ export default function TransactionsPage() {
 
       const [transactionsData, categoriesData, accountsData] =
         await Promise.all([
-          getTransactions(),
+          getTransactions(user!.userId),
           getCategories(),
           getAccountsByUserId(userId),
         ]);
@@ -501,6 +435,7 @@ export default function TransactionsPage() {
         onSuccess={() => {
           if (user) fetchData(user.userId);
         }}
+        userId={user ? user.userId : null}
       />
       <ToastContainer
         position="top-right"
