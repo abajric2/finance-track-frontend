@@ -40,14 +40,19 @@ export async function createGoal(goal: {
 
 export async function updateGoal(
   id: number,
-  updates: Partial<Pick<FinancialGoal, "name" | "targetAmount" | "deadline">>
+  updates: Partial<
+    Pick<FinancialGoal, "name" | "targetAmount" | "deadline" | "status">
+  >
 ): Promise<FinancialGoal> {
+  console.log(updates);
   const res = await fetchWithAuth(`${BASE_URL}/goals/${id}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(updates),
+    body: JSON.stringify({
+      ...updates,
+    }),
   });
 
   if (!res.ok) throw new Error("Failed to update financial goal");

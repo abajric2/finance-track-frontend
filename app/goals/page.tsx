@@ -51,7 +51,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { FinancialGoal } from "@/types/goal";
-import { createGoal, deleteGoal, getGoalsByUserUuid } from "@/lib/reportsApi";
+import {
+  createGoal,
+  deleteGoal,
+  getGoalsByUserUuid,
+  updateGoal,
+} from "@/lib/reportsApi";
 import { getCurrentUser } from "@/lib/userApi";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -66,6 +71,57 @@ export default function GoalsPage() {
   const [newDeadline, setNewDeadline] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<FinancialGoal | null>(null);
+  const [showEditGoalDialog, setShowEditGoalDialog] = useState(false);
+  const [editGoalData, setEditGoalData] = useState<FinancialGoal | null>(null);
+
+  const handleEditGoalClick = (goal: FinancialGoal) => {
+    setEditGoalData(goal);
+    setShowEditGoalDialog(true);
+  };
+
+  function calculateGoalStatus(
+    currAmount: number,
+    targetAmount: number,
+    deadline: string
+  ): "COMPLETED" | "FAILED" | "ACTIVE" {
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+
+    if (currAmount >= targetAmount) return "COMPLETED";
+    if (deadlineDate < now) return "FAILED";
+    return "ACTIVE";
+  }
+
+  const handleEditGoalSubmit = async () => {
+    if (!editGoalData) return;
+    try {
+      const status = calculateGoalStatus(
+        editGoalData.currAmount,
+        editGoalData.targetAmount,
+        editGoalData.deadline
+      );
+      console.log("statss ", status);
+      await updateGoal(editGoalData.financialGoalId, {
+        name: editGoalData.name,
+        targetAmount: editGoalData.targetAmount,
+        deadline: editGoalData.deadline,
+        status: status,
+      });
+      toast.success("Goal updated successfully!");
+
+      const user = await getCurrentUser();
+      if (user) {
+        const data = await getGoalsByUserUuid(user.userUuid);
+        setGoals(data);
+      }
+
+      setShowEditGoalDialog(false);
+      setEditGoalData(null);
+    } catch (error) {
+      toast.error("Failed to update goal");
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
     const loadGoals = async () => {
@@ -256,6 +312,7 @@ export default function GoalsPage() {
                     setGoalToDelete(goal);
                     setShowDeleteDialog(true);
                   }}
+                  onEdit={(goal) => handleEditGoalClick(goal)}
                 />
               ))}
             </div>
@@ -276,6 +333,7 @@ export default function GoalsPage() {
                     setGoalToDelete(goal);
                     setShowDeleteDialog(true);
                   }}
+                  onEdit={(goal) => handleEditGoalClick(goal)}
                 />
               ))}
             </div>
@@ -296,6 +354,7 @@ export default function GoalsPage() {
                     setGoalToDelete(goal);
                     setShowDeleteDialog(true);
                   }}
+                  onEdit={(goal) => handleEditGoalClick(goal)}
                 />
               ))}
             </div>
@@ -393,6 +452,70 @@ export default function GoalsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={showEditGoalDialog} onOpenChange={setShowEditGoalDialog}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Edit Goal</DialogTitle>
+            <DialogDescription>
+              Make changes to your financial goal and save them.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-goal-name">Goal Name</Label>
+              <Input
+                id="edit-goal-name"
+                value={editGoalData?.name || ""}
+                onChange={(e) =>
+                  setEditGoalData(
+                    (prev) => prev && { ...prev, name: e.target.value }
+                  )
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-target-amount">Target Amount</Label>
+              <Input
+                id="edit-target-amount"
+                type="number"
+                value={editGoalData?.targetAmount || ""}
+                onChange={(e) =>
+                  setEditGoalData(
+                    (prev) =>
+                      prev && {
+                        ...prev,
+                        targetAmount: parseFloat(e.target.value),
+                      }
+                  )
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-deadline">Deadline</Label>
+              <Input
+                id="edit-deadline"
+                type="date"
+                min={new Date().toISOString().split("T")[0]}
+                value={editGoalData?.deadline?.split("T")[0] || ""}
+                onChange={(e) =>
+                  setEditGoalData(
+                    (prev) => prev && { ...prev, deadline: e.target.value }
+                  )
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditGoalDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleEditGoalSubmit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -408,6 +531,7 @@ interface FinancialGoalProps {
   status: "ACTIVE" | "COMPLETED" | "FAILED";
   onDelete: (goal: FinancialGoal) => void;
   goal: FinancialGoal;
+  onEdit: (goal: FinancialGoal) => void;
 }
 
 function FinancialGoalCard({
@@ -421,6 +545,7 @@ function FinancialGoalCard({
   status,
   onDelete,
   goal,
+  onEdit,
 }: FinancialGoalProps) {
   const progress = Math.min(
     Math.round((currentAmount / targetAmount) * 100),
@@ -454,10 +579,16 @@ function FinancialGoalCard({
             {/*/ <CardDescription>{category}</CardDescription>*/}
           </div>
           <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onEdit(goal)}
+            >
               <Edit className="h-4 w-4" />
               <span className="sr-only">Edit</span>
             </Button>
+
             <Button
               variant="ghost"
               size="icon"
