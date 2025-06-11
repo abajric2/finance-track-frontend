@@ -59,7 +59,7 @@ export function MainNav() {
           >
             Recurring
           </Link>
-          <Link
+          {/*<Link
             href="/accounts"
             className={cn(
               "text-sm font-medium",
@@ -69,7 +69,7 @@ export function MainNav() {
             )}
           >
             Accounts
-          </Link>
+          </Link>*/}
           <Link
             href="/budgets"
             className={cn(

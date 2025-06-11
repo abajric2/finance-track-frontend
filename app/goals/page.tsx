@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   ArrowRight,
   Calendar,
@@ -38,9 +38,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { FinancialGoal } from "@/types/goal"
+import { getGoalsByUserUuid } from "@/lib/reportsApi"
+import { getCurrentUser } from "@/lib/userApi"
 
 export default function GoalsPage() {
   const [showAddGoalDialog, setShowAddGoalDialog] = useState(false)
+const [goals, setGoals] = useState<FinancialGoal[]>([])
+
+useEffect(() => {
+  const loadGoals = async () => {
+    console.log("ojjj")
+    const user = await getCurrentUser()
+    if (!user) return console.warn("User not found")
+      console.log("lavvoi ",user)
+    const data = await getGoalsByUserUuid(user.userUuid)
+  console.log("<golzzz ", data)
+    setGoals(data)
+  }
+
+  loadGoals()
+}, [])
+
 
   return (
     <div className="container py-6">
@@ -133,55 +152,24 @@ export default function GoalsPage() {
             </Select>
           </div>
 
-          <TabsContent value="all" className="space-y-4 mt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <FinancialGoalCard
-                name="Emergency Fund"
-                targetAmount={10000}
-                currentAmount={8000}
-                deadline="August 15, 2023"
-                category="Savings"
-                priority="High"
-                timeframe="Short Term"
-              />
-              <FinancialGoalCard
-                name="Down Payment for House"
-                targetAmount={50000}
-                currentAmount={15000}
-                deadline="December 31, 2025"
-                category="Housing"
-                priority="Medium"
-                timeframe="Long Term"
-              />
-              <FinancialGoalCard
-                name="New Car"
-                targetAmount={25000}
-                currentAmount={5000}
-                deadline="June 30, 2024"
-                category="Transportation"
-                priority="Medium"
-                timeframe="Medium Term"
-              />
-              <FinancialGoalCard
-                name="Vacation to Europe"
-                targetAmount={8000}
-                currentAmount={3500}
-                deadline="May 1, 2024"
-                category="Travel"
-                priority="Low"
-                timeframe="Short Term"
-              />
-              <FinancialGoalCard
-                name="Retirement Fund"
-                targetAmount={1000000}
-                currentAmount={120000}
-                deadline="January 1, 2050"
-                category="Retirement"
-                priority="High"
-                timeframe="Long Term"
-              />
-            </div>
-          </TabsContent>
+<TabsContent value="all" className="space-y-4 mt-4">
+  <div className="grid gap-4 md:grid-cols-2">
+    {goals.map((goal) => (
+      <FinancialGoalCard
+        key={goal.financialGoalId}
+        name={goal.name}
+        targetAmount={Number(goal.targetAmount)}
+        currentAmount={Number(goal.currAmount)}
+        deadline={new Date(goal.deadline).toLocaleDateString()}
+        category="General" // NEMA u DTO → koristi placeholder
+        priority="Medium" // NEMA u DTO → koristi placeholder
+        timeframe="Medium Term" // NEMA u DTO → koristi placeholder
+        completed={goal.status === "COMPLETED"}
+      />
+    ))}
+  </div>
+</TabsContent>
+
 
           <TabsContent value="short-term" className="space-y-4 mt-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -417,7 +405,6 @@ function FinancialGoalCard({
         <Progress
           value={progress}
           className={completed ? "bg-green-100" : ""}
-          indicatorClassName={completed ? "bg-green-500" : ""}
         />
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
