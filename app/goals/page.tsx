@@ -57,6 +57,7 @@ import { getCurrentUser } from "@/lib/userApi";
 export default function GoalsPage() {
   const [showAddGoalDialog, setShowAddGoalDialog] = useState(false);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const loadGoals = async () => {
@@ -72,9 +73,13 @@ export default function GoalsPage() {
     loadGoals();
   }, []);
 
-  const activeGoals = goals.filter((g) => g.status === "ACTIVE");
-  const completedGoals = goals.filter((g) => g.status === "COMPLETED");
-  const failedGoals = goals.filter((g) => g.status === "FAILED");
+  const filteredGoals = goals.filter((g) =>
+    g.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const activeGoals = filteredGoals.filter((g) => g.status === "ACTIVE");
+  const completedGoals = filteredGoals.filter((g) => g.status === "COMPLETED");
+  const failedGoals = filteredGoals.filter((g) => g.status === "FAILED");
 
   return (
     <div className="container py-6">
@@ -146,7 +151,12 @@ export default function GoalsPage() {
             <div className="flex items-center gap-2">
               <div className="relative w-64">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search goals..." className="pl-8" />
+                <Input
+                  placeholder="Search goals..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
           </div>
