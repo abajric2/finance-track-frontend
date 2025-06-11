@@ -1,15 +1,108 @@
-import { Bell, CreditCard, Globe, LogOut, Plus, Shield, User } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+"use client"
+import {
+  Bell,
+  CreditCard,
+  Globe,
+  LogOut,
+  Plus,
+  Shield,
+  User,
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import currency from "currency.js"
+import { fetchWithAuth } from "@/lib/fetchWithAuth"
+import { UserResponse } from "@/types/user"
 
 export default function SettingsPage() {
+  const [userData, setUserData] = useState<any>(null)
+  const [formData, setFormData] = useState({
+  firstName: "",
+  lastName: "",
+  currency: "",
+  dateOfBirth: "",
+  country: "",
+})
+
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser)
+        setUserData(parsed)
+      } catch (error) {
+        console.error("Failed to parse user from localStorage:", error)
+      }
+    }
+  }, [])
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setFormData({ ...formData, [e.target.name]: e.target.value })
+}
+
+  useEffect(() => {
+  if (userData) {
+    setFormData({
+      firstName: userData.name?.split(" ")[0] || "",
+      lastName: userData.name?.split(" ")[1] || "",
+      currency: userData.currency || "",
+      dateOfBirth: userData.dateOfBirth || "",
+      country: userData.country || "",
+    })
+  }
+}, [userData])
+
+
+  const handleSaveChanges = async () => {
+  if (!userData?.userId) return
+
+  const updates = {
+    name: `${formData.firstName} ${formData.lastName}`,
+    currency: formData.currency,
+    dateOfBirth: formData.dateOfBirth,
+    country: formData.country,
+  }
+
+  try {
+    await patchUser(userData.userId, updates)
+ //   alert("Changes saved successfully!")
+  } catch (err) {
+    //alert("Failed to save changes.")
+    console.error(err)
+  }
+}
+
+
   return (
     <div className="container py-6">
       <div className="grid gap-6">
@@ -56,27 +149,68 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="first-name">First Name</Label>
-                        <Input id="first-name" defaultValue="John" />
+                        <Input id="first-name" name="firstName" value={formData?.firstName}    onChange={handleChange}
+/>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="last-name">Last Name</Label>
-                        <Input id="last-name" defaultValue="Doe" />
+                        <Input id="last-name" name="lastName" value={formData?.lastName}    onChange={handleChange}
+/>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue="john.doe@example.com" />
+                      <Label htmlFor="user-id">User ID</Label>
+                      <Input id="user-id" value={userData?.userId || ""} readOnly    className="bg-muted/40 text-muted-foreground cursor-not-allowed"
+/>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" type="tel" defaultValue="(555) 123-4567" />
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" value={userData?.email || ""} readOnly    className="bg-muted/40 text-muted-foreground cursor-not-allowed"
+/>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Currency</Label>
+<Select
+  value={formData.currency}
+  onValueChange={(val) => setFormData({ ...formData, currency: val })}
+>
+  <SelectTrigger id="currency">
+    <SelectValue placeholder="Select currency" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="USD">USD ($)</SelectItem>
+    <SelectItem value="GBP">GBP (£)</SelectItem>
+  </SelectContent>
+</Select>                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dob">Date of Birth</Label>
+                      <Input id="dob" name='dateOfBirth' type="date" value={formData?.dateOfBirth || ""} onChange={handleChange}  
+ />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country</Label>
+                      <Input  
+id="country" name="country" value={formData?.country || ""}   onChange={handleChange}
+ />
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button>Save Changes</Button>
+                    <Button onClick={handleSaveChanges}>Save Changes</Button>
                   </CardFooter>
                 </Card>
               </TabsContent>
+              {/* Toast container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        pauseOnFocusLoss
+        theme="light"
+      />
+
 
               <TabsContent value="account" className="space-y-4 mt-0">
                 <Card>
@@ -450,6 +584,8 @@ export default function SettingsPage() {
                     <Button>Save Display Preferences</Button>
                   </CardFooter>
                 </Card>
+                
+      
 
                 <Card>
                   <CardHeader>
@@ -495,4 +631,57 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+async function patchUser(
+  userId: number,
+  updates: {
+    name: string
+    currency: string
+    dateOfBirth: string
+    country: string
+  }
+): Promise<any> {
+  try {
+    const response = await fetchWithAuth(`http://localhost:8080/api/users/api/users/${userId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to update user: ${errorText}`)
+      
+    }
+        const storedUser = localStorage.getItem("user")
+        if(storedUser)
+        {const parsed = JSON.parse(storedUser)
+        
+      const userRes = await fetchWithAuth(
+        `http://localhost:8080/api/users/api/users/email/${parsed.email}`
+      );
+    
+      if (!userRes.ok) {
+        throw new Error(`Failed to fetch user by email: ${userRes.statusText}`);
+      }
+    
+      const user: UserResponse = await userRes.json();
+    
+      localStorage.setItem("user", JSON.stringify(user));}
+        
+      
+
+    
+
+    const data = await response.json()
+    toast.success("Successfully update your personal info!")
+    return data;}
+   catch (error) {
+    console.error("Error updating user:", error)
+    throw error
+  }
+}
+
 
