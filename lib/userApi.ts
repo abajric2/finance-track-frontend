@@ -69,13 +69,9 @@ export async function loginUser({
   return user;
 }
 
-export async function getAccounts(): Promise<Account[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/api/users/accounts`);
-  if (!res.ok) throw new Error(`Failed to fetch accounts: ${res.statusText}`);
-  return await res.json();
-}
-
-export async function getAccountsByUserId(userId: number): Promise<Account[]> {
+export async function getAccountsByUserId(
+  userId: number | null
+): Promise<Account[]> {
   const res = await fetchWithAuth(
     `${BASE_URL}/api/users/accountsByUserId/${userId}`
   );

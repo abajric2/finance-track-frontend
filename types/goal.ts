@@ -1,3 +1,5 @@
+import { Transaction } from "./transaction";
+
 export interface FinancialGoal {
   financialGoalId: number;
   userUuid: string;
@@ -6,5 +8,5 @@ export interface FinancialGoal {
   currAmount: number;
   deadline: string;
   status: "ACTIVE" | "COMPLETED" | "FAILED";
-  transactions: any[];
+  transactions: Transaction[];
 }

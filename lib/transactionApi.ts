@@ -1,23 +1,32 @@
 import { Category } from "@/types/category";
 import { Transaction } from "@/types/transaction";
 import { fetchWithAuth } from "./fetchWithAuth";
+import { getAccountsByUserId } from "./userApi";
 
 const TRANSACTION_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/transactions/api/transactions`;
 
-export async function getTransactions(): Promise<Transaction[]> {
-  const res = await fetchWithAuth(`${TRANSACTION_URL}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+export async function getTransactions(userId: number): Promise<Transaction[]> {
+  const accounts = await getAccountsByUserId(userId);
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch transactions: ${res.statusText}`);
-  }
+  const allTransactions: Transaction[] = [];
 
-  const data: Transaction[] = await res.json();
-  return data;
+  await Promise.all(
+    accounts.map(async (account) => {
+      const res = await fetchWithAuth(
+        `${TRANSACTION_URL}/account/${account.accountUuid}`
+      );
+      if (!res.ok) {
+        console.warn(
+          `Failed to fetch transactions for account ${account.accountUuid}`
+        );
+        return;
+      }
+      const transactions: Transaction[] = await res.json();
+      allTransactions.push(...transactions);
+    })
+  );
+
+  return allTransactions;
 }
 
 export async function getCategories(): Promise<Category[]> {

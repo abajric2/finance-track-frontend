@@ -19,7 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import { Transaction } from "@/types/transaction";
 import { createTransaction, getCategories } from "@/lib/transactionApi";
-import { getAccounts, getCurrentUser } from "@/lib/userApi";
+import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
 import { getBudgetsByUserUuid, incrementCurrentAmount } from "@/lib/budgetApi";
@@ -28,12 +28,14 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  userId: number | null;
 }
 
 export default function AddTransactionModal({
   open,
   onClose,
   onSuccess,
+  userId,
 }: Props) {
   const [formData, setFormData] = useState({
     amount: "",
@@ -51,7 +53,7 @@ export default function AddTransactionModal({
   useEffect(() => {
     if (open) {
       getCategories().then(setCategories);
-      getAccounts().then(setAccounts);
+      getAccountsByUserId(userId).then(setAccounts);
 
       (async () => {
         const user = getCurrentUser();
