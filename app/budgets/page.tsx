@@ -493,36 +493,11 @@ export default function BudgetsPage() {
                       </p>
                     </div>
                   </div>
-                  <Select defaultValue="edit">
-                    <SelectTrigger className="w-24">
-                      <SelectValue placeholder="Permission" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="view">View</SelectItem>
-                      <SelectItem value="edit">Edit</SelectItem>
-                      <SelectItem value="remove">Remove</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <CustomLabel>General Access</CustomLabel>
-              <div className="flex items-center justify-between">
-                <div className="grid gap-1">
-                  <p className="text-sm font-medium">Anyone with the link</p>
-                  <p className="text-xs text-muted-foreground">
-                    Share a link that allows viewing the budget
-                  </p>
-                </div>
-                <Switch />
               </div>
             </div>
           </div>
-          <DialogFooter className="sm:justify-between">
-            <Button variant="outline" className="hidden sm:flex">
-              Copy Link
-            </Button>
+          <DialogFooter className="sm:justify-right">
             <div className="flex gap-2">
               <Button
                 variant="outline"
