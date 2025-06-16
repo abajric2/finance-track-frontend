@@ -123,3 +123,24 @@ export async function getUsersByBudgetId(
   if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
 }
+
+export async function addUserToBudget(
+  budgetId: number,
+  userUuid: string
+): Promise<BudgetUserDTO> {
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/budgets/${budgetId}/users?userUuid=${userUuid}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(
+      `Failed to add user to budget (${budgetId}): ${res.status} - ${message}`
+    );
+  }
+
+  return res.json();
+}

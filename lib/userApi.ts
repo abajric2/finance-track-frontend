@@ -178,3 +178,14 @@ export async function getUserByUuid(uuid: string): Promise<UserResponse> {
   if (!res.ok) throw new Error("Failed to fetch user by UUID");
   return res.json();
 }
+
+export async function getUserByEmail(email: string): Promise<UserResponse> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/users/email/${email}`);
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`Failed to fetch user by email: ${res.status} - ${msg}`);
+  }
+
+  return await res.json();
+}

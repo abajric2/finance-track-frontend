@@ -52,8 +52,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { BudgetResponse } from "@/types/budget";
-import { getCurrentUser, getUserByUuid } from "@/lib/userApi";
+import { getCurrentUser, getUserByEmail, getUserByUuid } from "@/lib/userApi";
 import {
+  addUserToBudget,
   getAllCategories,
   getBudgetsByUserUuid,
   getUsersByBudgetId,
@@ -82,6 +83,7 @@ import { SharedBudgetCard } from "@/components/SharedBudgetCard";
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<number | null>(null);
+  const [emailToShare, setEmailToShare] = useState("");
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
   const [user, setUser] = useState<UserResponse | null>(null);
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
@@ -541,8 +543,44 @@ export default function BudgetsPage() {
                   id="email"
                   placeholder="name@example.com"
                   className="flex-1"
+                  value={emailToShare}
+                  onChange={(e) => setEmailToShare(e.target.value)}
                 />
-                <Button>Add</Button>
+
+                <Button
+                  onClick={async () => {
+                    if (!selectedBudget) return;
+                    try {
+                      const userToShare = await getUserByEmail(emailToShare);
+
+                      await addUserToBudget(
+                        selectedBudget,
+                        userToShare.userUuid
+                      );
+
+                      const users = await getUsersByBudgetId(selectedBudget);
+                      const fullUsers = await Promise.all(
+                        users
+                          .filter((u) => u.userUuid !== user?.userUuid)
+                          .map((u) => getUserByUuid(u.userUuid))
+                      );
+
+                      setSharedUsers((prev) => ({
+                        ...prev,
+                        [selectedBudget]: [...fullUsers, user!],
+                      }));
+
+                      setEmailToShare("");
+                    } catch (err) {
+                      console.error(err);
+                      alert(
+                        "Failed to share budget. Check console for details."
+                      );
+                    }
+                  }}
+                >
+                  Add
+                </Button>
               </div>
             </div>
             <div className="space-y-2">
