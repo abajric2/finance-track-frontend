@@ -328,7 +328,11 @@ export default function BudgetsPage() {
                       budget={budget.amount}
                       icon={<PiggyBank className="h-4 w-4" />}
                       overBudget={isOver}
-                      onShare={() => handleShareBudget(budget.budgetId)}
+                      onShare={
+                        budget.owner === user?.userUuid
+                          ? () => handleShareBudget(budget.budgetId)
+                          : undefined
+                      }
                       isShared={budget.shared}
                       period={budget.period}
                       sharedWith={
@@ -640,7 +644,7 @@ interface BudgetCategoryProps {
   budget: number;
   icon: React.ReactNode;
   overBudget?: boolean;
-  onShare: () => void;
+  onShare?: () => void;
   isShared?: boolean;
   sharedWith?: Array<{
     name: string;
@@ -709,15 +713,18 @@ function BudgetCategory({
                 )}
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onShare}
-            >
-              <Share2 className="h-4 w-4" />
-              <span className="sr-only">Share</span>
-            </Button>
+            {onShare && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onShare}
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="sr-only">Share</span>
+              </Button>
+            )}
+
             <div
               className={`text-sm font-medium ${
                 overBudget ? "text-destructive" : ""
