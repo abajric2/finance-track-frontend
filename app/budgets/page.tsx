@@ -467,6 +467,15 @@ export default function BudgetsPage() {
                           budget={budget.amount}
                           isShared={true}
                           period={budget.period}
+                          sharedWith={
+                            sharedUsers[budget.budgetId]
+                              ?.filter((u) => u.userUuid !== user?.userUuid)
+                              .map((u) => ({
+                                name: u.name,
+                                email: u.email,
+                                avatar: "",
+                              })) ?? []
+                          }
                         />
                       );
                     })}
@@ -486,6 +495,15 @@ export default function BudgetsPage() {
                           isShared={true}
                           readonly={true}
                           period={budget.period}
+                          sharedWith={
+                            sharedUsers[budget.budgetId]
+                              ?.filter((u) => u.userUuid !== user?.userUuid)
+                              .map((u) => ({
+                                name: u.name,
+                                email: u.email,
+                                avatar: "",
+                              })) ?? []
+                          }
                         />
                       );
                     })}

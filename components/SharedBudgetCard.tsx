@@ -78,6 +78,7 @@ export const SharedBudgetCard = ({
                 )}
               </div>
             )}
+
             {!readonly && (
               <Button
                 variant="ghost"
