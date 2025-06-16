@@ -14,6 +14,11 @@ import {
   Share2,
   Users,
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -747,15 +752,28 @@ function BudgetCategory({
           <div className="flex items-center gap-2">
             {isShared && sharedWith.length > 0 && (
               <div className="flex -space-x-2 mr-2">
-                {sharedWith.map((person, index) => (
-                  <Avatar
-                    key={index}
-                    className="border-2 border-background h-6 w-6"
-                  >
-                    <AvatarImage src={person.avatar} alt={person.name} />
-                    <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                {sharedWith.slice(0, 3).map((person, index) => (
+                  <HoverCard key={index}>
+                    <HoverCardTrigger asChild>
+                      <div className="relative group">
+                        <Avatar className="border-2 border-background h-6 w-6 cursor-pointer">
+                          <AvatarImage src={person.avatar} alt={person.name} />
+                          <AvatarFallback>
+                            {person.name
+                              .split(" ")
+                              .slice(0, 2)
+                              .map((n) => n.charAt(0).toUpperCase())
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="text-xs py-1 px-2">
+                      {person.email}
+                    </HoverCardContent>
+                  </HoverCard>
                 ))}
+
                 {sharedWith.length > 3 && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
                     +{sharedWith.length - 3}
