@@ -12,9 +12,9 @@ export default function ClientLayoutWrapper({
   const hideNav = pathname === "/login" || pathname === "/register";
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="min-h-screen flex flex-col">
       {!hideNav && <MainNav />}
-      <main className="flex-1 overflow-auto px-10 py-5">{children}</main>
+      <main className="flex-1 px-10 py-5">{children}</main>
     </div>
   );
 }
