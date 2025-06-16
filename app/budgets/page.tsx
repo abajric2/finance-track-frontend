@@ -58,6 +58,7 @@ import {
   getAllCategories,
   getBudgetsByUserUuid,
   getUsersByBudgetId,
+  markBudgetAsShared,
 } from "@/lib/budgetApi";
 import { CategoryDTO } from "@/types/budgetCategory";
 import {
@@ -556,6 +557,18 @@ export default function BudgetsPage() {
                       await addUserToBudget(
                         selectedBudget,
                         userToShare.userUuid
+                      );
+
+                      const updatedBudget = await markBudgetAsShared(
+                        selectedBudget
+                      );
+
+                      setBudgets((prevBudgets) =>
+                        prevBudgets.map((b) =>
+                          b.budgetId === selectedBudget
+                            ? { ...b, shared: true }
+                            : b
+                        )
                       );
 
                       const users = await getUsersByBudgetId(selectedBudget);

@@ -144,3 +144,26 @@ export async function addUserToBudget(
 
   return res.json();
 }
+
+export async function markBudgetAsShared(
+  budgetId: number
+): Promise<BudgetResponse> {
+  const updates = { shared: true };
+
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/${budgetId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(
+      `Failed to mark budget as shared: ${res.status} - ${message}`
+    );
+  }
+
+  return await res.json();
+}
