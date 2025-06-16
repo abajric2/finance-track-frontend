@@ -329,7 +329,7 @@ export default function BudgetsPage() {
                       icon={<PiggyBank className="h-4 w-4" />}
                       overBudget={isOver}
                       onShare={
-                        budget.owner === user?.userUuid
+                        user?.role === "PAID" && budget.owner === user.userUuid
                           ? () => handleShareBudget(budget.budgetId)
                           : undefined
                       }
@@ -453,38 +453,43 @@ export default function BudgetsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="by-you">
+                <Tabs
+                  defaultValue={user?.role === "PAID" ? "by-you" : "with-you"}
+                >
                   <TabsList>
-                    <TabsTrigger value="by-you">Shared by You</TabsTrigger>
+                    {user?.role === "PAID" && (
+                      <TabsTrigger value="by-you">Shared by You</TabsTrigger>
+                    )}
                     <TabsTrigger value="with-you">Shared with You</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="by-you" className="mt-4 space-y-4">
-                    {sharedByYou.map((budget) => {
-                      const categoryName =
-                        categoryMap.get(budget.categoryId) ??
-                        "Unknown Category";
-                      return (
-                        <SharedBudgetCard
-                          key={budget.budgetId}
-                          category={categoryName}
-                          spent={budget.currentAmount}
-                          budget={budget.amount}
-                          isShared={true}
-                          period={budget.period}
-                          sharedWith={
-                            sharedUsers[budget.budgetId]
-                              ?.filter((u) => u.userUuid !== user?.userUuid)
-                              .map((u) => ({
-                                name: u.name,
-                                email: u.email,
-                                avatar: "",
-                              })) ?? []
-                          }
-                        />
-                      );
-                    })}
-                  </TabsContent>
-
+                  {user?.role === "PAID" && (
+                    <TabsContent value="by-you" className="mt-4 space-y-4">
+                      {sharedByYou.map((budget) => {
+                        const categoryName =
+                          categoryMap.get(budget.categoryId) ??
+                          "Unknown Category";
+                        return (
+                          <SharedBudgetCard
+                            key={budget.budgetId}
+                            category={categoryName}
+                            spent={budget.currentAmount}
+                            budget={budget.amount}
+                            isShared={true}
+                            period={budget.period}
+                            sharedWith={
+                              sharedUsers[budget.budgetId]
+                                ?.filter((u) => u.userUuid !== user?.userUuid)
+                                .map((u) => ({
+                                  name: u.name,
+                                  email: u.email,
+                                  avatar: "",
+                                })) ?? []
+                            }
+                          />
+                        );
+                      })}
+                    </TabsContent>
+                  )}
                   <TabsContent value="with-you" className="mt-4 space-y-4">
                     {sharedWithYou.map((budget) => {
                       const categoryName =
@@ -514,12 +519,6 @@ export default function BudgetsPage() {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full">
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share a New Budget
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
