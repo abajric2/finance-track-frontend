@@ -10,4 +10,5 @@ export interface UserResponse {
   email: string;
   password: string;
   accounts: Account[];
+  role: string;
 }

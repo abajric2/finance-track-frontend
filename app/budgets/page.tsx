@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   Filter,
+  Pencil,
   PiggyBank,
   Plus,
   Search,
@@ -14,6 +15,11 @@ import {
   Share2,
   Users,
 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -52,8 +58,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { BudgetResponse } from "@/types/budget";
-import { getCurrentUser } from "@/lib/userApi";
-import { getAllCategories, getBudgetsByUserUuid } from "@/lib/budgetApi";
+import { getCurrentUser, getUserByEmail, getUserByUuid } from "@/lib/userApi";
+import {
+  addUserToBudget,
+  getAllCategories,
+  getBudgetsByUserUuid,
+  getUsersByBudgetId,
+  markBudgetAsShared,
+} from "@/lib/budgetApi";
 import { CategoryDTO } from "@/types/budgetCategory";
 import {
   Command,
@@ -74,10 +86,12 @@ import { ToastContainer } from "react-toastify";
 import CreateBudgetModal from "@/components/CreateBudgetModal";
 import { UserResponse } from "@/types/user";
 import { SharedBudgetCard } from "@/components/SharedBudgetCard";
+import { EditBudgetModal } from "@/components/EditBudgetModal";
 
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<number | null>(null);
+  const [emailToShare, setEmailToShare] = useState("");
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
   const [user, setUser] = useState<UserResponse | null>(null);
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
@@ -85,10 +99,16 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
+  const [sharedUsers, setSharedUsers] = useState<
+    Record<number, UserResponse[]>
+  >({});
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
+  const [editBudgetId, setEditBudgetId] = useState<number | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const categoryMap = useMemo(() => {
     const map = new Map<number, string>();
     categories.forEach((cat) => {
@@ -102,8 +122,8 @@ export default function BudgetsPage() {
       ? categoryMap.get(selectedCategoryId)
       : "All Categories";
 
-  const handleShareBudget = (budgetName: string) => {
-    setSelectedBudget(budgetName);
+  const handleShareBudget = (budgetId: number) => {
+    setSelectedBudget(budgetId);
     setShowShareDialog(true);
   };
 
@@ -116,13 +136,57 @@ export default function BudgetsPage() {
         getBudgetsByUserUuid(localUser.userUuid),
         getAllCategories(),
       ])
-        .then(([budgetsRes, categoriesRes]) => {
+        .then(async ([budgetsRes, categoriesRes]) => {
           setBudgets(budgetsRes);
           setCategories(categoriesRes);
+
+          const sharedBudgets = budgetsRes.filter((budget) => budget.shared);
+
+          const usersMap: Record<number, UserResponse[]> = {};
+
+          for (const b of sharedBudgets) {
+            const users = await getUsersByBudgetId(b.budgetId);
+            const fullUsers = await Promise.all(
+              users
+                .filter((u) => u.userUuid !== localUser.userUuid)
+                .map((u) => getUserByUuid(u.userUuid))
+            );
+            usersMap[b.budgetId] = fullUsers;
+          }
+
+          setSharedUsers(usersMap);
         })
         .catch((err) => console.error("Failed to fetch data", err));
     }
   }, []);
+
+  useEffect(() => {
+    const localUser = getCurrentUser();
+    if (!showShareDialog || !selectedBudget || !localUser) return;
+
+    const loadSharedForSelectedBudget = async () => {
+      try {
+        const users = await getUsersByBudgetId(selectedBudget);
+        const fullUsers = await Promise.all(
+          users
+            .filter((u) => u.userUuid !== localUser.userUuid)
+            .map((u) => getUserByUuid(u.userUuid))
+        );
+
+        setSharedUsers((prev) => ({
+          ...prev,
+          [selectedBudget]: [...fullUsers, localUser],
+        }));
+      } catch (error) {
+        console.error(
+          "Failed to load shared users for selected budget:",
+          error
+        );
+      }
+    };
+
+    loadSharedForSelectedBudget();
+  }, [showShareDialog, selectedBudget]);
 
   const overBudget = budgets.filter((b) => b.currentAmount > b.amount);
   const underBudget = budgets.filter((b) => b.currentAmount <= b.amount);
@@ -277,9 +341,30 @@ export default function BudgetsPage() {
                       budget={budget.amount}
                       icon={<PiggyBank className="h-4 w-4" />}
                       overBudget={isOver}
-                      onShare={() => handleShareBudget(budget.budgetUuid)}
+                      onShare={
+                        user?.role === "PAID" && budget.owner === user.userUuid
+                          ? () => handleShareBudget(budget.budgetId)
+                          : undefined
+                      }
+                      onEdit={
+                        budget.owner === user?.userUuid
+                          ? () => {
+                              setEditBudgetId(budget.budgetId);
+                              setIsEditModalOpen(true);
+                            }
+                          : undefined
+                      }
                       isShared={budget.shared}
                       period={budget.period}
+                      sharedWith={
+                        sharedUsers[budget.budgetId]
+                          ?.filter((u) => u.userUuid !== user?.userUuid)
+                          .map((u) => ({
+                            name: u.name,
+                            email: u.email,
+                            avatar: "",
+                          })) ?? []
+                      }
                     />
                   );
                 })}
@@ -389,29 +474,43 @@ export default function BudgetsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="by-you">
+                <Tabs
+                  defaultValue={user?.role === "PAID" ? "by-you" : "with-you"}
+                >
                   <TabsList>
-                    <TabsTrigger value="by-you">Shared by You</TabsTrigger>
+                    {user?.role === "PAID" && (
+                      <TabsTrigger value="by-you">Shared by You</TabsTrigger>
+                    )}
                     <TabsTrigger value="with-you">Shared with You</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="by-you" className="mt-4 space-y-4">
-                    {sharedByYou.map((budget) => {
-                      const categoryName =
-                        categoryMap.get(budget.categoryId) ??
-                        "Unknown Category";
-                      return (
-                        <SharedBudgetCard
-                          key={budget.budgetId}
-                          category={categoryName}
-                          spent={budget.currentAmount}
-                          budget={budget.amount}
-                          isShared={true}
-                          period={budget.period}
-                        />
-                      );
-                    })}
-                  </TabsContent>
-
+                  {user?.role === "PAID" && (
+                    <TabsContent value="by-you" className="mt-4 space-y-4">
+                      {sharedByYou.map((budget) => {
+                        const categoryName =
+                          categoryMap.get(budget.categoryId) ??
+                          "Unknown Category";
+                        return (
+                          <SharedBudgetCard
+                            key={budget.budgetId}
+                            category={categoryName}
+                            spent={budget.currentAmount}
+                            budget={budget.amount}
+                            isShared={true}
+                            period={budget.period}
+                            sharedWith={
+                              sharedUsers[budget.budgetId]
+                                ?.filter((u) => u.userUuid !== user?.userUuid)
+                                .map((u) => ({
+                                  name: u.name,
+                                  email: u.email,
+                                  avatar: "",
+                                })) ?? []
+                            }
+                          />
+                        );
+                      })}
+                    </TabsContent>
+                  )}
                   <TabsContent value="with-you" className="mt-4 space-y-4">
                     {sharedWithYou.map((budget) => {
                       const categoryName =
@@ -426,18 +525,21 @@ export default function BudgetsPage() {
                           isShared={true}
                           readonly={true}
                           period={budget.period}
+                          sharedWith={
+                            sharedUsers[budget.budgetId]
+                              ?.filter((u) => u.userUuid !== user?.userUuid)
+                              .map((u) => ({
+                                name: u.name,
+                                email: u.email,
+                                avatar: "",
+                              })) ?? []
+                          }
                         />
                       );
                     })}
                   </TabsContent>
                 </Tabs>
               </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full">
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share a New Budget
-                </Button>
-              </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
@@ -460,40 +562,87 @@ export default function BudgetsPage() {
                   id="email"
                   placeholder="name@example.com"
                   className="flex-1"
+                  value={emailToShare}
+                  onChange={(e) => setEmailToShare(e.target.value)}
                 />
-                <Button>Add</Button>
+
+                <Button
+                  onClick={async () => {
+                    if (!selectedBudget) return;
+                    try {
+                      const userToShare = await getUserByEmail(emailToShare);
+
+                      await addUserToBudget(
+                        selectedBudget,
+                        userToShare.userUuid
+                      );
+
+                      const updatedBudget = await markBudgetAsShared(
+                        selectedBudget
+                      );
+
+                      setBudgets((prevBudgets) =>
+                        prevBudgets.map((b) =>
+                          b.budgetId === selectedBudget
+                            ? { ...b, shared: true }
+                            : b
+                        )
+                      );
+
+                      const users = await getUsersByBudgetId(selectedBudget);
+                      const fullUsers = await Promise.all(
+                        users
+                          .filter((u) => u.userUuid !== user?.userUuid)
+                          .map((u) => getUserByUuid(u.userUuid))
+                      );
+
+                      setSharedUsers((prev) => ({
+                        ...prev,
+                        [selectedBudget]: [...fullUsers, user!],
+                      }));
+
+                      setEmailToShare("");
+                    } catch (err) {
+                      console.error(err);
+                      alert(
+                        "Failed to share budget. Check console for details."
+                      );
+                    }
+                  }}
+                >
+                  Add
+                </Button>
               </div>
             </div>
             <div className="space-y-2">
               <CustomLabel>People with Access</CustomLabel>
               <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-md border p-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>YD</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">You (Owner)</p>
-                      <p className="text-xs text-muted-foreground">
-                        your.email@example.com
-                      </p>
+                {sharedUsers[selectedBudget!]?.map((u) => (
+                  <div
+                    key={u.userUuid}
+                    className="flex items-center justify-between rounded-md border p-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {u.name
+                            ?.split(" ")
+                            .map((part) => part[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {u.name}
+                          {u.userUuid === user?.userUuid && " (you)"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {u.email}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between rounded-md border p-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/avatars/01.png" alt="Sarah Johnson" />
-                      <AvatarFallback>SJ</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">Sarah Johnson</p>
-                      <p className="text-xs text-muted-foreground">
-                        sarah@example.com
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -524,6 +673,29 @@ export default function BudgetsPage() {
           getBudgetsByUserUuid(user!.userUuid).then(setBudgets);
         }}
       />
+      {editBudgetId !== null &&
+        (() => {
+          const budgetToEdit = budgets.find((b) => b.budgetId === editBudgetId);
+          if (!budgetToEdit) return null;
+
+          return (
+            <EditBudgetModal
+              open={isEditModalOpen}
+              budget={budgetToEdit}
+              categories={categories}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setEditBudgetId(null);
+              }}
+              onSuccess={() => {
+                if (user) {
+                  getBudgetsByUserUuid(user.userUuid).then(setBudgets);
+                }
+              }}
+            />
+          );
+        })()}
+
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -563,7 +735,7 @@ interface BudgetCategoryProps {
   budget: number;
   icon: React.ReactNode;
   overBudget?: boolean;
-  onShare: () => void;
+  onShare?: () => void;
   isShared?: boolean;
   sharedWith?: Array<{
     name: string;
@@ -571,6 +743,7 @@ interface BudgetCategoryProps {
     avatar: string;
   }>;
   period: string;
+  onEdit?: () => void;
 }
 
 function BudgetCategory({
@@ -583,6 +756,7 @@ function BudgetCategory({
   isShared = false,
   sharedWith = [],
   period,
+  onEdit,
 }: BudgetCategoryProps) {
   const percentage = Math.min(Math.round((spent / budget) * 100), 100);
 
@@ -616,15 +790,28 @@ function BudgetCategory({
           <div className="flex items-center gap-2">
             {isShared && sharedWith.length > 0 && (
               <div className="flex -space-x-2 mr-2">
-                {sharedWith.map((person, index) => (
-                  <Avatar
-                    key={index}
-                    className="border-2 border-background h-6 w-6"
-                  >
-                    <AvatarImage src={person.avatar} alt={person.name} />
-                    <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                {sharedWith.slice(0, 3).map((person, index) => (
+                  <HoverCard key={index}>
+                    <HoverCardTrigger asChild>
+                      <div className="relative group">
+                        <Avatar className="border-2 border-background h-6 w-6 cursor-pointer">
+                          <AvatarImage src={person.avatar} alt={person.name} />
+                          <AvatarFallback>
+                            {person.name
+                              .split(" ")
+                              .slice(0, 2)
+                              .map((n) => n.charAt(0).toUpperCase())
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="text-xs py-1 px-2">
+                      {person.email}
+                    </HoverCardContent>
+                  </HoverCard>
                 ))}
+
                 {sharedWith.length > 3 && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
                     +{sharedWith.length - 3}
@@ -632,15 +819,29 @@ function BudgetCategory({
                 )}
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onShare}
-            >
-              <Share2 className="h-4 w-4" />
-              <span className="sr-only">Share</span>
-            </Button>
+            {onShare && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onShare}
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="sr-only">Share</span>
+              </Button>
+            )}
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onEdit}
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit</span>
+              </Button>
+            )}
+
             <div
               className={`text-sm font-medium ${
                 overBudget ? "text-destructive" : ""

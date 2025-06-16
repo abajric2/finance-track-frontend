@@ -122,7 +122,7 @@ export function MainNav() {
             className="ml-2"
             onClick={handleLogout}
           >
-            <LogOut className="h-5 w-5 text-white" />
+            <LogOut className="h-5 w-5 text-foreground" />
             <span className="sr-only">Logout</span>
           </Button>
         </div>

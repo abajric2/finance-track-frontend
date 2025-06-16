@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Users, Share2 } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 
 type Person = {
   name: string;
   avatar: string;
+  email: string;
 };
 
 type Props = {
@@ -63,14 +69,27 @@ export const SharedBudgetCard = ({
             {isShared && sharedWith.length > 0 && (
               <div className="flex -space-x-2 mr-2">
                 {sharedWith.slice(0, 3).map((person, index) => (
-                  <Avatar
-                    key={index}
-                    className="border-2 border-background h-6 w-6"
-                  >
-                    <AvatarImage src={person.avatar} alt={person.name} />
-                    <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                  <HoverCard key={index}>
+                    <HoverCardTrigger asChild>
+                      <div className="relative group">
+                        <Avatar className="border-2 border-background h-6 w-6 cursor-pointer">
+                          <AvatarImage src={person.avatar} alt={person.name} />
+                          <AvatarFallback>
+                            {person.name
+                              .split(" ")
+                              .slice(0, 2)
+                              .map((n) => n.charAt(0).toUpperCase())
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="text-xs py-1 px-2">
+                      {person.email}
+                    </HoverCardContent>
+                  </HoverCard>
                 ))}
+
                 {sharedWith.length > 3 && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
                     +{sharedWith.length - 3}
@@ -78,6 +97,7 @@ export const SharedBudgetCard = ({
                 )}
               </div>
             )}
+
             {!readonly && (
               <Button
                 variant="ghost"

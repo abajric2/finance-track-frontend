@@ -10,3 +10,9 @@ export interface BudgetResponse {
   endDate: string;
   categoryId: number;
 }
+
+export interface BudgetUserDTO {
+  id: number;
+  budgetId: number;
+  userUuid: string;
+}
