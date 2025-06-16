@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   Filter,
+  Pencil,
   PiggyBank,
   Plus,
   Search,
@@ -85,6 +86,7 @@ import { ToastContainer } from "react-toastify";
 import CreateBudgetModal from "@/components/CreateBudgetModal";
 import { UserResponse } from "@/types/user";
 import { SharedBudgetCard } from "@/components/SharedBudgetCard";
+import { EditBudgetModal } from "@/components/EditBudgetModal";
 
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -104,6 +106,9 @@ export default function BudgetsPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
+  const [editBudgetId, setEditBudgetId] = useState<number | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const categoryMap = useMemo(() => {
     const map = new Map<number, string>();
     categories.forEach((cat) => {
@@ -339,6 +344,14 @@ export default function BudgetsPage() {
                       onShare={
                         user?.role === "PAID" && budget.owner === user.userUuid
                           ? () => handleShareBudget(budget.budgetId)
+                          : undefined
+                      }
+                      onEdit={
+                        budget.owner === user?.userUuid
+                          ? () => {
+                              setEditBudgetId(budget.budgetId);
+                              setIsEditModalOpen(true);
+                            }
                           : undefined
                       }
                       isShared={budget.shared}
@@ -660,6 +673,29 @@ export default function BudgetsPage() {
           getBudgetsByUserUuid(user!.userUuid).then(setBudgets);
         }}
       />
+      {editBudgetId !== null &&
+        (() => {
+          const budgetToEdit = budgets.find((b) => b.budgetId === editBudgetId);
+          if (!budgetToEdit) return null;
+
+          return (
+            <EditBudgetModal
+              open={isEditModalOpen}
+              budget={budgetToEdit}
+              categories={categories}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setEditBudgetId(null);
+              }}
+              onSuccess={() => {
+                if (user) {
+                  getBudgetsByUserUuid(user.userUuid).then(setBudgets);
+                }
+              }}
+            />
+          );
+        })()}
+
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -707,6 +743,7 @@ interface BudgetCategoryProps {
     avatar: string;
   }>;
   period: string;
+  onEdit?: () => void;
 }
 
 function BudgetCategory({
@@ -719,6 +756,7 @@ function BudgetCategory({
   isShared = false,
   sharedWith = [],
   period,
+  onEdit,
 }: BudgetCategoryProps) {
   const percentage = Math.min(Math.round((spent / budget) * 100), 100);
 
@@ -790,6 +828,17 @@ function BudgetCategory({
               >
                 <Share2 className="h-4 w-4" />
                 <span className="sr-only">Share</span>
+              </Button>
+            )}
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onEdit}
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit</span>
               </Button>
             )}
 

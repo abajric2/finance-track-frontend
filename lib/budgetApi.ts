@@ -167,3 +167,35 @@ export async function markBudgetAsShared(
 
   return await res.json();
 }
+
+export async function updateBudgetDetails(data: {
+  budgetId: number;
+  amount: number;
+  period: string;
+  endDate?: Date | null;
+  categoryId: number;
+}): Promise<BudgetResponse> {
+  const updates = {
+    amount: data.amount,
+    period: data.period,
+    endDate: data.endDate ? data.endDate.getTime() : null,
+    categoryId: data.categoryId,
+  };
+
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/${data.budgetId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(
+      `Failed to update budget details: ${res.status} - ${message}`
+    );
+  }
+
+  return await res.json();
+}
