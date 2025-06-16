@@ -175,12 +175,15 @@ export async function updateBudgetDetails(data: {
   endDate?: Date | null;
   categoryId: number;
 }): Promise<BudgetResponse> {
-  const updates = {
+  const updates: Record<string, any> = {
     amount: data.amount,
     period: data.period,
-    endDate: data.endDate ? data.endDate.getTime() : null,
     categoryId: data.categoryId,
   };
+
+  if (data.endDate) {
+    updates.endDate = data.endDate.getTime();
+  }
 
   const res = await fetchWithAuth(`${BASE_URL}/api/budgets/${data.budgetId}`, {
     method: "PATCH",

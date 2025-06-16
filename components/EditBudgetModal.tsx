@@ -1,9 +1,3 @@
-// 1. Dodaj novi modal za editovanje budžeta
-// 2. Dodaj dugme u BudgetCategory ako je user vlasnik
-// 3. U BudgetsPage dodaj state i handle funkcije
-
-// === [1] ===
-// Kreiraj novu komponentu `EditBudgetModal.tsx`
 import React, { useState } from "react";
 import {
   Dialog,
@@ -48,13 +42,19 @@ export function EditBudgetModal({
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      await updateBudgetDetails({
+      const payload: any = {
         budgetId: budget.budgetId,
         amount: Number(amount),
         period,
-        endDate: endDate ? new Date(endDate) : null,
         categoryId,
-      });
+      };
+
+      if (endDate) {
+        payload.endDate = new Date(endDate);
+      }
+
+      await updateBudgetDetails(payload);
+
       toast.success("Budget updated successfully");
       onSuccess();
       onClose();
@@ -87,10 +87,9 @@ export function EditBudgetModal({
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="DAILY">Daily</SelectItem>
-                <SelectItem value="WEEKLY">Weekly</SelectItem>
-                <SelectItem value="MONTHLY">Monthly</SelectItem>
-                <SelectItem value="YEARLY">Yearly</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="yearly">Yearly</SelectItem>
               </SelectContent>
             </Select>
           </div>
