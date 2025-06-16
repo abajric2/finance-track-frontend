@@ -89,7 +89,9 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
-  const [sharedUsers, setSharedUsers] = useState<UserResponse[]>([]);
+  const [sharedUsers, setSharedUsers] = useState<
+    Record<number, UserResponse[]>
+  >({});
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
@@ -121,13 +123,57 @@ export default function BudgetsPage() {
         getBudgetsByUserUuid(localUser.userUuid),
         getAllCategories(),
       ])
-        .then(([budgetsRes, categoriesRes]) => {
+        .then(async ([budgetsRes, categoriesRes]) => {
           setBudgets(budgetsRes);
           setCategories(categoriesRes);
+
+          const sharedBudgets = budgetsRes.filter((budget) => budget.shared);
+
+          const usersMap: Record<number, UserResponse[]> = {};
+
+          for (const b of sharedBudgets) {
+            const users = await getUsersByBudgetId(b.budgetId);
+            const fullUsers = await Promise.all(
+              users
+                .filter((u) => u.userUuid !== localUser.userUuid)
+                .map((u) => getUserByUuid(u.userUuid))
+            );
+            usersMap[b.budgetId] = fullUsers;
+          }
+
+          setSharedUsers(usersMap);
         })
         .catch((err) => console.error("Failed to fetch data", err));
     }
   }, []);
+
+  useEffect(() => {
+    const localUser = getCurrentUser();
+    if (!showShareDialog || !selectedBudget || !localUser) return;
+
+    const loadSharedForSelectedBudget = async () => {
+      try {
+        const users = await getUsersByBudgetId(selectedBudget);
+        const fullUsers = await Promise.all(
+          users
+            .filter((u) => u.userUuid !== localUser.userUuid)
+            .map((u) => getUserByUuid(u.userUuid))
+        );
+
+        setSharedUsers((prev) => ({
+          ...prev,
+          [selectedBudget]: [...fullUsers, localUser],
+        }));
+      } catch (error) {
+        console.error(
+          "Failed to load shared users for selected budget:",
+          error
+        );
+      }
+    };
+
+    loadSharedForSelectedBudget();
+  }, [showShareDialog, selectedBudget]);
 
   const overBudget = budgets.filter((b) => b.currentAmount > b.amount);
   const underBudget = budgets.filter((b) => b.currentAmount <= b.amount);
@@ -142,24 +188,6 @@ export default function BudgetsPage() {
   const sharedWithYou = budgets.filter(
     (budget) => budget.shared && budget.owner !== user?.userUuid
   );
-
-  useEffect(() => {
-    if (!showShareDialog || !selectedBudget) return;
-
-    const loadSharedUsers = async () => {
-      try {
-        const sharedUserLinks = await getUsersByBudgetId(selectedBudget);
-        const userDetails = await Promise.all(
-          sharedUserLinks.map((u) => getUserByUuid(u.userUuid))
-        );
-        setSharedUsers(userDetails);
-      } catch (error) {
-        console.error("Failed to load shared users:", error);
-      }
-    };
-
-    loadSharedUsers();
-  }, [showShareDialog, selectedBudget]);
 
   return (
     <div className="container py-6">
@@ -303,6 +331,15 @@ export default function BudgetsPage() {
                       onShare={() => handleShareBudget(budget.budgetId)}
                       isShared={budget.shared}
                       period={budget.period}
+                      sharedWith={
+                        sharedUsers[budget.budgetId]
+                          ?.filter((u) => u.userUuid !== user?.userUuid)
+                          .map((u) => ({
+                            name: u.name,
+                            email: u.email,
+                            avatar: "",
+                          })) ?? []
+                      }
                     />
                   );
                 })}
@@ -490,7 +527,7 @@ export default function BudgetsPage() {
             <div className="space-y-2">
               <CustomLabel>People with Access</CustomLabel>
               <div className="space-y-2">
-                {sharedUsers.map((u) => (
+                {sharedUsers[selectedBudget!]?.map((u) => (
                   <div
                     key={u.userUuid}
                     className="flex items-center justify-between rounded-md border p-2"
