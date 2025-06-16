@@ -1,6 +1,7 @@
-import { BudgetResponse } from "@/types/budget";
+import { BudgetResponse, BudgetUserDTO } from "@/types/budget";
 import { fetchWithAuth } from "./fetchWithAuth";
 import { CategoryDTO } from "@/types/budgetCategory";
+import { UserResponse } from "@/types/user";
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/budgets`;
 
@@ -113,4 +114,12 @@ export async function createBudget(data: {
   }
 
   return createdBudget;
+}
+
+export async function getUsersByBudgetId(
+  budgetId: number
+): Promise<BudgetUserDTO[]> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/${budgetId}/users`);
+  if (!res.ok) throw new Error("Failed to fetch users");
+  return res.json();
 }

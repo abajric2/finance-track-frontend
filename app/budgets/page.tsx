@@ -52,8 +52,12 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { BudgetResponse } from "@/types/budget";
-import { getCurrentUser } from "@/lib/userApi";
-import { getAllCategories, getBudgetsByUserUuid } from "@/lib/budgetApi";
+import { getCurrentUser, getUserByUuid } from "@/lib/userApi";
+import {
+  getAllCategories,
+  getBudgetsByUserUuid,
+  getUsersByBudgetId,
+} from "@/lib/budgetApi";
 import { CategoryDTO } from "@/types/budgetCategory";
 import {
   Command,
@@ -77,7 +81,7 @@ import { SharedBudgetCard } from "@/components/SharedBudgetCard";
 
 export default function BudgetsPage() {
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<number | null>(null);
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
   const [user, setUser] = useState<UserResponse | null>(null);
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
@@ -85,6 +89,7 @@ export default function BudgetsPage() {
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
+  const [sharedUsers, setSharedUsers] = useState<UserResponse[]>([]);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
@@ -102,8 +107,8 @@ export default function BudgetsPage() {
       ? categoryMap.get(selectedCategoryId)
       : "All Categories";
 
-  const handleShareBudget = (budgetName: string) => {
-    setSelectedBudget(budgetName);
+  const handleShareBudget = (budgetId: number) => {
+    setSelectedBudget(budgetId);
     setShowShareDialog(true);
   };
 
@@ -137,6 +142,24 @@ export default function BudgetsPage() {
   const sharedWithYou = budgets.filter(
     (budget) => budget.shared && budget.owner !== user?.userUuid
   );
+
+  useEffect(() => {
+    if (!showShareDialog || !selectedBudget) return;
+
+    const loadSharedUsers = async () => {
+      try {
+        const sharedUserLinks = await getUsersByBudgetId(selectedBudget);
+        const userDetails = await Promise.all(
+          sharedUserLinks.map((u) => getUserByUuid(u.userUuid))
+        );
+        setSharedUsers(userDetails);
+      } catch (error) {
+        console.error("Failed to load shared users:", error);
+      }
+    };
+
+    loadSharedUsers();
+  }, [showShareDialog, selectedBudget]);
 
   return (
     <div className="container py-6">
@@ -277,7 +300,7 @@ export default function BudgetsPage() {
                       budget={budget.amount}
                       icon={<PiggyBank className="h-4 w-4" />}
                       overBudget={isOver}
-                      onShare={() => handleShareBudget(budget.budgetUuid)}
+                      onShare={() => handleShareBudget(budget.budgetId)}
                       isShared={budget.shared}
                       period={budget.period}
                     />
@@ -467,33 +490,32 @@ export default function BudgetsPage() {
             <div className="space-y-2">
               <CustomLabel>People with Access</CustomLabel>
               <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-md border p-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>YD</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">You (Owner)</p>
-                      <p className="text-xs text-muted-foreground">
-                        your.email@example.com
-                      </p>
+                {sharedUsers.map((u) => (
+                  <div
+                    key={u.userUuid}
+                    className="flex items-center justify-between rounded-md border p-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {u.name
+                            ?.split(" ")
+                            .map((part) => part[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {u.name}
+                          {u.userUuid === user?.userUuid && " (you)"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {u.email}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between rounded-md border p-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/avatars/01.png" alt="Sarah Johnson" />
-                      <AvatarFallback>SJ</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">Sarah Johnson</p>
-                      <p className="text-xs text-muted-foreground">
-                        sarah@example.com
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
