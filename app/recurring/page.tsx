@@ -82,13 +82,21 @@ export default function RecurringTransactionsPage() {
     Record<number, { name: string; type: string }>
   >({});
   const [frequencyFilter, setFrequencyFilter] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const filterByFrequency = (transactions: ExtendedRecurringTransaction[]) =>
-    transactions.filter(
-      (rec) =>
+  const filterTransactions = (transactions: ExtendedRecurringTransaction[]) =>
+    transactions.filter((rec) => {
+      const matchesFrequency =
         !frequencyFilter ||
-        rec.periodic.frequency?.toLowerCase() === frequencyFilter
-    );
+        rec.periodic.frequency?.toLowerCase() === frequencyFilter;
+
+      const matchesSearch =
+        rec.transaction?.description
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ?? false;
+
+      return matchesFrequency && matchesSearch;
+    });
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -122,9 +130,9 @@ export default function RecurringTransactionsPage() {
       categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "expense"
   );
 
-  const filteredAll = filterByFrequency(recurringTransactions);
-  const filteredIncome = filterByFrequency(recurringIncome);
-  const filteredExpenses = filterByFrequency(recurringExpenses);
+  const filteredAll = filterTransactions(recurringTransactions);
+  const filteredIncome = filterTransactions(recurringIncome);
+  const filteredExpenses = filterTransactions(recurringExpenses);
 
   return (
     <div className="container py-6">
@@ -200,7 +208,12 @@ export default function RecurringTransactionsPage() {
             <div className="flex items-center gap-2">
               <div className="relative w-64">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search recurring..." className="pl-8" />
+                <Input
+                  placeholder="Search recurring..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
