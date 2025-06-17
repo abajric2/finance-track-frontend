@@ -44,11 +44,17 @@ export default function AddTransactionModal({
     categoryId: "",
     accountUuid: "",
     budgetUuid: "",
+    goalId: "",
   });
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
+
+  const selectedCategory = categories.find(
+    (cat) => String(cat.categoryId) === formData.categoryId
+  );
+  const isSaveCategory = selectedCategory?.name === "Save";
 
   useEffect(() => {
     if (open) {
@@ -180,6 +186,33 @@ export default function AddTransactionModal({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>Goal</Label>
+            <Select
+              value={formData.goalId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, goalId: value })
+              }
+              disabled={!isSaveCategory}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    isSaveCategory
+                      ? "Select goal"
+                      : "Available only if category is 'Save'"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Prazna lista za sad */}
+                <SelectItem value="__no-goals__" disabled>
+                  No goals available
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Label>Account</Label>
             <Select
