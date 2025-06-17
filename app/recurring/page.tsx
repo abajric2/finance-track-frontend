@@ -33,10 +33,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -79,6 +81,14 @@ export default function RecurringTransactionsPage() {
   const [categories, setCategories] = useState<
     Record<number, { name: string; type: string }>
   >({});
+  const [frequencyFilter, setFrequencyFilter] = useState<string | null>(null);
+
+  const filterByFrequency = (transactions: ExtendedRecurringTransaction[]) =>
+    transactions.filter(
+      (rec) =>
+        !frequencyFilter ||
+        rec.periodic.frequency?.toLowerCase() === frequencyFilter
+    );
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -111,6 +121,10 @@ export default function RecurringTransactionsPage() {
     (rec) =>
       categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "expense"
   );
+
+  const filteredAll = filterByFrequency(recurringTransactions);
+  const filteredIncome = filterByFrequency(recurringIncome);
+  const filteredExpenses = filterByFrequency(recurringExpenses);
 
   return (
     <div className="container py-6">
@@ -196,13 +210,27 @@ export default function RecurringTransactionsPage() {
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end" className="w-[200px]">
-                  <DropdownMenuCheckboxItem checked>
-                    All Frequencies
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem>Monthly</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem>Weekly</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem>Yearly</DropdownMenuCheckboxItem>
+                  <DropdownMenuRadioGroup
+                    value={frequencyFilter || "all"}
+                    onValueChange={(value) =>
+                      setFrequencyFilter(value === "all" ? null : value)
+                    }
+                  >
+                    <DropdownMenuRadioItem value="all">
+                      All Frequencies
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="monthly">
+                      Monthly
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="weekly">
+                      Weekly
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="yearly">
+                      Yearly
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -229,7 +257,7 @@ export default function RecurringTransactionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recurringTransactions.map((rec) => {
+                    {filteredAll.map((rec) => {
                       const firstTransaction = rec.transaction;
                       const amount = firstTransaction?.amount || 0;
                       const category =
@@ -295,7 +323,7 @@ export default function RecurringTransactionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recurringIncome.map((rec) => {
+                    {filteredIncome.map((rec) => {
                       const tx = rec.transaction;
                       const amount = tx?.amount || 0;
                       const category =
@@ -361,7 +389,7 @@ export default function RecurringTransactionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recurringExpenses.map((rec) => {
+                    {filteredExpenses.map((rec) => {
                       const tx = rec.transaction;
                       const amount = tx?.amount || 0;
                       const category =
@@ -520,13 +548,6 @@ export default function RecurringTransactionsPage() {
                   <SelectItem value="credit">Credit Card</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch id="auto-track" />
-              <Label htmlFor="auto-track">
-                Automatically track this transaction
-              </Label>
             </div>
           </div>
           <DialogFooter>
