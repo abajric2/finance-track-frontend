@@ -76,10 +76,6 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline">
-                <PiggyBank className="mr-2 h-4 w-4" />
-                Link Account
-              </Button>
               <Button onClick={() => setShowModal(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Manual Account

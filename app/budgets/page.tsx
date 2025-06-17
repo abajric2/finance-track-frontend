@@ -221,10 +221,9 @@ export default function BudgetsPage() {
         </div>
 
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 md:w-auto">
+          <TabsList className="grid w-full grid-cols-2 md:w-auto">
             <TabsTrigger value="categories">All Budgets</TabsTrigger>
-            <TabsTrigger value="trends">Budget Trends</TabsTrigger>
-            <TabsTrigger value="planning">Budget Planning</TabsTrigger>
+
             <TabsTrigger value="shared">Shared Budgets</TabsTrigger>
           </TabsList>
 
@@ -369,100 +368,6 @@ export default function BudgetsPage() {
                   );
                 })}
             </div>
-          </TabsContent>
-
-          <TabsContent value="trends" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Budget Trends</CardTitle>
-                <CardDescription>
-                  Compare your spending over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[400px] flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <ArrowUpDown className="mx-auto h-12 w-12 mb-4" />
-                  <p>Budget trend visualization would appear here</p>
-                  <p className="text-sm">
-                    Showing monthly spending patterns and trends
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="planning" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Budget Planning</CardTitle>
-                <CardDescription>
-                  Plan your budget for upcoming months
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <CustomLabel>Month</CustomLabel>
-                      <Select defaultValue="july-2023">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="july-2023">July 2023</SelectItem>
-                          <SelectItem value="august-2023">
-                            August 2023
-                          </SelectItem>
-                          <SelectItem value="september-2023">
-                            September 2023
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <CustomLabel>Total Budget</CustomLabel>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                          $
-                        </span>
-                        <Input
-                          placeholder="5,000.00"
-                          className="pl-7"
-                          defaultValue="5,000.00"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <CustomLabel>Budget Categories</CustomLabel>
-                      <Button variant="outline" size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Category
-                      </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <BudgetPlanningItem name="Housing" amount={1500} />
-                      <BudgetPlanningItem name="Food & Dining" amount={800} />
-                      <BudgetPlanningItem name="Transportation" amount={400} />
-                      <BudgetPlanningItem name="Entertainment" amount={300} />
-                      <BudgetPlanningItem name="Shopping" amount={500} />
-                      <BudgetPlanningItem name="Utilities" amount={250} />
-                      <BudgetPlanningItem
-                        name="Health & Fitness"
-                        amount={200}
-                      />
-                      <BudgetPlanningItem name="Personal Care" amount={150} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="ml-auto">Save Budget Plan</Button>
-              </CardFooter>
-            </Card>
           </TabsContent>
 
           <TabsContent value="shared" className="space-y-4 mt-4">
