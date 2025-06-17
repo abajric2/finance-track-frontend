@@ -17,3 +17,11 @@ export interface TransactionFormValues {
   accountUuid: string;
   categoryId: string;
 }
+
+export interface PeriodicTransaction {
+  periodicTransactionId: number;
+  frequency: string;
+  startDate: string;
+  endDate: string;
+  transactions: Transaction[];
+}

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import {
   Bell,
   CreditCard,
@@ -7,8 +7,8 @@ import {
   Plus,
   Shield,
   User,
-} from "lucide-react"
-import { useEffect, useState } from "react"
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -16,99 +16,93 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import currency from "currency.js"
-import { fetchWithAuth } from "@/lib/fetchWithAuth"
-import { UserResponse } from "@/types/user"
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import currency from "currency.js";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { UserResponse } from "@/types/user";
 
 export default function SettingsPage() {
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<any>(null);
   const [formData, setFormData] = useState({
-  firstName: "",
-  lastName: "",
-  currency: "",
-  dateOfBirth: "",
-  country: "",
-})
-
+    firstName: "",
+    lastName: "",
+    currency: "",
+    dateOfBirth: "",
+    country: "",
+  });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        const parsed = JSON.parse(storedUser)
-        setUserData(parsed)
+        const parsed = JSON.parse(storedUser);
+        setUserData(parsed);
       } catch (error) {
-        console.error("Failed to parse user from localStorage:", error)
+        console.error("Failed to parse user from localStorage:", error);
       }
     }
-  }, [])
+  }, []);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  setFormData({ ...formData, [e.target.name]: e.target.value })
-}
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   useEffect(() => {
-  if (userData) {
-    setFormData({
-      firstName: userData.name?.split(" ")[0] || "",
-      lastName: userData.name?.split(" ")[1] || "",
-      currency: userData.currency || "",
-      dateOfBirth: userData.dateOfBirth || "",
-      country: userData.country || "",
-    })
-  }
-}, [userData])
-
+    if (userData) {
+      setFormData({
+        firstName: userData.name?.split(" ")[0] || "",
+        lastName: userData.name?.split(" ")[1] || "",
+        currency: userData.currency || "",
+        dateOfBirth: userData.dateOfBirth || "",
+        country: userData.country || "",
+      });
+    }
+  }, [userData]);
 
   const handleSaveChanges = async () => {
-  if (!userData?.userId) return
+    if (!userData?.userId) return;
 
-  const updates = {
-    name: `${formData.firstName} ${formData.lastName}`,
-    currency: formData.currency,
-    dateOfBirth: formData.dateOfBirth,
-    country: formData.country,
-  }
+    const updates = {
+      name: `${formData.firstName} ${formData.lastName}`,
+      currency: formData.currency,
+      dateOfBirth: formData.dateOfBirth,
+      country: formData.country,
+    };
 
-  try {
-    await patchUser(userData.userId, updates)
- //   alert("Changes saved successfully!")
-  } catch (err) {
-    //alert("Failed to save changes.")
-    console.error(err)
-  }
-}
-
+    try {
+      await patchUser(userData.userId, updates);
+      //   alert("Changes saved successfully!")
+    } catch (err) {
+      //alert("Failed to save changes.")
+      console.error(err);
+    }
+  };
 
   return (
     <div className="container py-6">
       <div className="grid gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+          <p className="text-muted-foreground">
+            Manage your account settings and preferences.
+          </p>
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
@@ -143,55 +137,85 @@ export default function SettingsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Profile Information</CardTitle>
-                    <CardDescription>Update your personal information</CardDescription>
+                    <CardDescription>
+                      Update your personal information
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="first-name">First Name</Label>
-                        <Input id="first-name" name="firstName" value={formData?.firstName}    onChange={handleChange}
-/>
+                        <Input
+                          id="first-name"
+                          name="firstName"
+                          value={formData?.firstName}
+                          onChange={handleChange}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="last-name">Last Name</Label>
-                        <Input id="last-name" name="lastName" value={formData?.lastName}    onChange={handleChange}
-/>
+                        <Input
+                          id="last-name"
+                          name="lastName"
+                          value={formData?.lastName}
+                          onChange={handleChange}
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="user-id">User ID</Label>
-                      <Input id="user-id" value={userData?.userId || ""} readOnly    className="bg-muted/40 text-muted-foreground cursor-not-allowed"
-/>
+                      <Input
+                        id="user-id"
+                        value={userData?.userId || ""}
+                        readOnly
+                        className="bg-muted/40 text-muted-foreground cursor-not-allowed"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" value={userData?.email || ""} readOnly    className="bg-muted/40 text-muted-foreground cursor-not-allowed"
-/>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={userData?.email || ""}
+                        readOnly
+                        className="bg-muted/40 text-muted-foreground cursor-not-allowed"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="currency">Currency</Label>
-<Select
-  value={formData.currency}
-  onValueChange={(val) => setFormData({ ...formData, currency: val })}
->
-  <SelectTrigger id="currency">
-    <SelectValue placeholder="Select currency" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="USD">USD ($)</SelectItem>
-    <SelectItem value="GBP">GBP (£)</SelectItem>
-  </SelectContent>
-</Select>                    </div>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(val) =>
+                          setFormData({ ...formData, currency: val })
+                        }
+                      >
+                        <SelectTrigger id="currency">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD ($)</SelectItem>
+                          <SelectItem value="GBP">GBP (£)</SelectItem>
+                        </SelectContent>
+                      </Select>{" "}
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="dob">Date of Birth</Label>
-                      <Input id="dob" name='dateOfBirth' type="date" value={formData?.dateOfBirth || ""} onChange={handleChange}  
- />
+                      <Input
+                        id="dob"
+                        name="dateOfBirth"
+                        type="date"
+                        value={formData?.dateOfBirth || ""}
+                        onChange={handleChange}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="country">Country</Label>
-                      <Input  
-id="country" name="country" value={formData?.country || ""}   onChange={handleChange}
- />
+                      <Input
+                        id="country"
+                        name="country"
+                        value={formData?.country || ""}
+                        onChange={handleChange}
+                      />
                     </div>
                   </CardContent>
                   <CardFooter>
@@ -200,7 +224,7 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 </Card>
               </TabsContent>
               {/* Toast container */}
-      <ToastContainer
+              {/*   <ToastContainer
         position="top-right"
         autoClose={2500}
         hideProgressBar={false}
@@ -209,14 +233,15 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
         draggable
         pauseOnFocusLoss
         theme="light"
-      />
-
+      />*/}
 
               <TabsContent value="account" className="space-y-4 mt-0">
                 <Card>
                   <CardHeader>
                     <CardTitle>Account Settings</CardTitle>
-                    <CardDescription>Manage your account preferences</CardDescription>
+                    <CardDescription>
+                      Manage your account preferences
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -272,7 +297,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 <Card>
                   <CardHeader>
                     <CardTitle>Linked Accounts</CardTitle>
-                    <CardDescription>Manage your connected financial institutions</CardDescription>
+                    <CardDescription>
+                      Manage your connected financial institutions
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -280,7 +307,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                         <CreditCard className="h-5 w-5" />
                         <div>
                           <div className="font-medium">Bank of America</div>
-                          <div className="text-xs text-muted-foreground">Connected on Jun 12, 2023</div>
+                          <div className="text-xs text-muted-foreground">
+                            Connected on Jun 12, 2023
+                          </div>
                         </div>
                       </div>
                       <Button variant="outline" size="sm">
@@ -292,7 +321,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                         <CreditCard className="h-5 w-5" />
                         <div>
                           <div className="font-medium">Chase Bank</div>
-                          <div className="text-xs text-muted-foreground">Connected on May 3, 2023</div>
+                          <div className="text-xs text-muted-foreground">
+                            Connected on May 3, 2023
+                          </div>
                         </div>
                       </div>
                       <Button variant="outline" size="sm">
@@ -304,7 +335,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                         <CreditCard className="h-5 w-5" />
                         <div>
                           <div className="font-medium">Vanguard</div>
-                          <div className="text-xs text-muted-foreground">Connected on Apr 18, 2023</div>
+                          <div className="text-xs text-muted-foreground">
+                            Connected on Apr 18, 2023
+                          </div>
                         </div>
                       </div>
                       <Button variant="outline" size="sm">
@@ -322,8 +355,12 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                    <CardDescription>Irreversible account actions</CardDescription>
+                    <CardTitle className="text-destructive">
+                      Danger Zone
+                    </CardTitle>
+                    <CardDescription>
+                      Irreversible account actions
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -345,16 +382,24 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 <Card>
                   <CardHeader>
                     <CardTitle>Notification Settings</CardTitle>
-                    <CardDescription>Manage how you receive notifications</CardDescription>
+                    <CardDescription>
+                      Manage how you receive notifications
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium">Email Notifications</h3>
+                      <h3 className="text-sm font-medium">
+                        Email Notifications
+                      </h3>
                       <Separator />
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label htmlFor="email-transactions">Transaction Alerts</Label>
-                          <p className="text-xs text-muted-foreground">Receive emails for new transactions</p>
+                          <Label htmlFor="email-transactions">
+                            Transaction Alerts
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Receive emails for new transactions
+                          </p>
                         </div>
                         <Switch id="email-transactions" defaultChecked />
                       </div>
@@ -370,13 +415,17 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
                           <Label htmlFor="email-reports">Weekly Reports</Label>
-                          <p className="text-xs text-muted-foreground">Receive weekly financial summary reports</p>
+                          <p className="text-xs text-muted-foreground">
+                            Receive weekly financial summary reports
+                          </p>
                         </div>
                         <Switch id="email-reports" />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label htmlFor="email-marketing">Marketing & Updates</Label>
+                          <Label htmlFor="email-marketing">
+                            Marketing & Updates
+                          </Label>
                           <p className="text-xs text-muted-foreground">
                             Receive product updates and promotional offers
                           </p>
@@ -386,11 +435,15 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium">Push Notifications</h3>
+                      <h3 className="text-sm font-medium">
+                        Push Notifications
+                      </h3>
                       <Separator />
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label htmlFor="push-transactions">Transaction Alerts</Label>
+                          <Label htmlFor="push-transactions">
+                            Transaction Alerts
+                          </Label>
                           <p className="text-xs text-muted-foreground">
                             Receive push notifications for new transactions
                           </p>
@@ -401,7 +454,8 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                         <div className="space-y-0.5">
                           <Label htmlFor="push-budgets">Budget Alerts</Label>
                           <p className="text-xs text-muted-foreground">
-                            Receive push notifications when you approach budget limits
+                            Receive push notifications when you approach budget
+                            limits
                           </p>
                         </div>
                         <Switch id="push-budgets" defaultChecked />
@@ -410,7 +464,8 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                         <div className="space-y-0.5">
                           <Label htmlFor="push-security">Security Alerts</Label>
                           <p className="text-xs text-muted-foreground">
-                            Receive push notifications for security-related events
+                            Receive push notifications for security-related
+                            events
                           </p>
                         </div>
                         <Switch id="push-security" defaultChecked />
@@ -427,7 +482,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 <Card>
                   <CardHeader>
                     <CardTitle>Security Settings</CardTitle>
-                    <CardDescription>Manage your account security</CardDescription>
+                    <CardDescription>
+                      Manage your account security
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -439,7 +496,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                       <Input id="new-password" type="password" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Label htmlFor="confirm-password">
+                        Confirm New Password
+                      </Label>
                       <Input id="confirm-password" type="password" />
                     </div>
                   </CardContent>
@@ -451,13 +510,17 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 <Card>
                   <CardHeader>
                     <CardTitle>Two-Factor Authentication</CardTitle>
-                    <CardDescription>Add an extra layer of security to your account</CardDescription>
+                    <CardDescription>
+                      Add an extra layer of security to your account
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label>Two-Factor Authentication</Label>
-                        <p className="text-xs text-muted-foreground">Require a verification code when logging in</p>
+                        <p className="text-xs text-muted-foreground">
+                          Require a verification code when logging in
+                        </p>
                       </div>
                       <Switch defaultChecked />
                     </div>
@@ -487,7 +550,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 <Card>
                   <CardHeader>
                     <CardTitle>Login Sessions</CardTitle>
-                    <CardDescription>Manage your active sessions</CardDescription>
+                    <CardDescription>
+                      Manage your active sessions
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-4">
@@ -497,7 +562,8 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                           <div>
                             <div className="font-medium">Current Session</div>
                             <div className="text-xs text-muted-foreground">
-                              Chrome on Windows • New York, USA • Started 2 hours ago
+                              Chrome on Windows • New York, USA • Started 2
+                              hours ago
                             </div>
                           </div>
                         </div>
@@ -534,7 +600,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                 <Card>
                   <CardHeader>
                     <CardTitle>Display Preferences</CardTitle>
-                    <CardDescription>Customize your app experience</CardDescription>
+                    <CardDescription>
+                      Customize your app experience
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
@@ -560,7 +628,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                         <SelectContent>
                           <SelectItem value="dashboard">Dashboard</SelectItem>
                           <SelectItem value="accounts">Accounts</SelectItem>
-                          <SelectItem value="transactions">Transactions</SelectItem>
+                          <SelectItem value="transactions">
+                            Transactions
+                          </SelectItem>
                           <SelectItem value="budgets">Budgets</SelectItem>
                         </SelectContent>
                       </Select>
@@ -568,14 +638,18 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label htmlFor="compact-view">Compact View</Label>
-                        <p className="text-xs text-muted-foreground">Display more information with less spacing</p>
+                        <p className="text-xs text-muted-foreground">
+                          Display more information with less spacing
+                        </p>
                       </div>
                       <Switch id="compact-view" />
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label htmlFor="animations">Animations</Label>
-                        <p className="text-xs text-muted-foreground">Enable animations and transitions</p>
+                        <p className="text-xs text-muted-foreground">
+                          Enable animations and transitions
+                        </p>
                       </div>
                       <Switch id="animations" defaultChecked />
                     </div>
@@ -584,13 +658,13 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                     <Button>Save Display Preferences</Button>
                   </CardFooter>
                 </Card>
-                
-      
 
                 <Card>
                   <CardHeader>
                     <CardTitle>Privacy Settings</CardTitle>
-                    <CardDescription>Manage your data and privacy preferences</CardDescription>
+                    <CardDescription>
+                      Manage your data and privacy preferences
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -604,7 +678,9 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="personalized-tips">Personalized Tips</Label>
+                        <Label htmlFor="personalized-tips">
+                          Personalized Tips
+                        </Label>
                         <p className="text-xs text-muted-foreground">
                           Receive personalized financial tips based on your data
                         </p>
@@ -613,8 +689,12 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="third-party">Third-Party Integrations</Label>
-                        <p className="text-xs text-muted-foreground">Allow third-party services to access your data</p>
+                        <Label htmlFor="third-party">
+                          Third-Party Integrations
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Allow third-party services to access your data
+                        </p>
                       </div>
                       <Switch id="third-party" />
                     </div>
@@ -629,59 +709,56 @@ id="country" name="country" value={formData?.country || ""}   onChange={handleCh
         </Tabs>
       </div>
     </div>
-  )
+  );
 }
 
 async function patchUser(
   userId: number,
   updates: {
-    name: string
-    currency: string
-    dateOfBirth: string
-    country: string
+    name: string;
+    currency: string;
+    dateOfBirth: string;
+    country: string;
   }
 ): Promise<any> {
   try {
-    const response = await fetchWithAuth(`http://localhost:8080/api/users/api/users/${userId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(updates),
-    })
+    const response = await fetchWithAuth(
+      `http://localhost:8080/api/users/api/users/${userId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      }
+    );
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to update user: ${errorText}`)
-      
+      const errorText = await response.text();
+      throw new Error(`Failed to update user: ${errorText}`);
     }
-        const storedUser = localStorage.getItem("user")
-        if(storedUser)
-        {const parsed = JSON.parse(storedUser)
-        
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+
       const userRes = await fetchWithAuth(
         `http://localhost:8080/api/users/api/users/email/${parsed.email}`
       );
-    
+
       if (!userRes.ok) {
         throw new Error(`Failed to fetch user by email: ${userRes.statusText}`);
       }
-    
+
       const user: UserResponse = await userRes.json();
-    
-      localStorage.setItem("user", JSON.stringify(user));}
-        
-      
 
-    
+      localStorage.setItem("user", JSON.stringify(user));
+    }
 
-    const data = await response.json()
-    toast.success("Successfully update your personal info!")
-    return data;}
-   catch (error) {
-    console.error("Error updating user:", error)
-    throw error
+    const data = await response.json();
+    toast.success("Successfully update your personal info!");
+    return data;
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
   }
 }
-
-

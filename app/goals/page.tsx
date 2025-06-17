@@ -421,7 +421,7 @@ export default function GoalsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ToastContainer
+      {/* <ToastContainer
         position="top-right"
         autoClose={2500}
         hideProgressBar={false}
@@ -430,7 +430,7 @@ export default function GoalsPage() {
         draggable
         pauseOnFocusLoss
         theme="light"
-      />
+      />*/}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>

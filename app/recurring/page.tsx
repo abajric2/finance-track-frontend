@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -13,10 +13,16 @@ import {
   RefreshCw,
   Search,
   Trash,
-} from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,36 +30,73 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { PeriodicTransaction } from "@/types/transaction";
+import { getUserPeriodicTransactions } from "@/lib/transactionApi";
+import { getCurrentUser } from "@/lib/userApi";
 
 export default function RecurringTransactionsPage() {
-  const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false)
-  const [showProjectionDialog, setShowProjectionDialog] = useState(false)
+  const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false);
+  const [showProjectionDialog, setShowProjectionDialog] = useState(false);
+  const [recurringTransactions, setRecurringTransactions] = useState<
+    PeriodicTransaction[]
+  >([]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user?.userId) return;
+
+    getUserPeriodicTransactions(user.userId)
+      .then(setRecurringTransactions)
+      .catch((err) =>
+        console.error("Error fetching recurring transactions", err)
+      );
+  }, []);
 
   return (
     <div className="container py-6">
       <div className="grid gap-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Recurring Transactions</h1>
-            <p className="text-muted-foreground">Manage your regular income and expenses.</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Recurring Transactions
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your regular income and expenses.
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowProjectionDialog(true)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowProjectionDialog(true)}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               View Projections
             </Button>
@@ -72,7 +115,9 @@ export default function RecurringTransactionsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground mt-2">8 expenses, 4 income</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                8 expenses, 4 income
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -81,8 +126,12 @@ export default function RecurringTransactionsPage() {
               <CardDescription>Recurring expenses</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">-$2,345.00</div>
-              <p className="text-xs text-muted-foreground mt-2">Next: Rent ($1,200) on July 1</p>
+              <div className="text-2xl font-bold text-destructive">
+                -$2,345.00
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Next: Rent ($1,200) on July 1
+              </p>
             </CardContent>
           </Card>
           <Card>
@@ -91,8 +140,12 @@ export default function RecurringTransactionsPage() {
               <CardDescription>Recurring income</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">+$5,800.00</div>
-              <p className="text-xs text-muted-foreground mt-2">Next: Salary ($4,500) on June 30</p>
+              <div className="text-2xl font-bold text-green-600">
+                +$5,800.00
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Next: Salary ($4,500) on June 30
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -120,7 +173,9 @@ export default function RecurringTransactionsPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
-                  <DropdownMenuCheckboxItem checked>All Frequencies</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked>
+                    All Frequencies
+                  </DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem>Monthly</DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem>Weekly</DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem>Yearly</DropdownMenuCheckboxItem>
@@ -144,7 +199,9 @@ export default function RecurringTransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>All Recurring Transactions</CardTitle>
-                <CardDescription>Showing all your recurring transactions</CardDescription>
+                <CardDescription>
+                  Showing all your recurring transactions
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -159,153 +216,66 @@ export default function RecurringTransactionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Salary</TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Income</Badge>
-                      </TableCell>
-                      <TableCell>Monthly (30th)</TableCell>
-                      <TableCell>June 30, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$4,500.00</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Rent</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Housing</Badge>
-                      </TableCell>
-                      <TableCell>Monthly (1st)</TableCell>
-                      <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$1,200.00</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Netflix</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Entertainment</Badge>
-                      </TableCell>
-                      <TableCell>Monthly (15th)</TableCell>
-                      <TableCell>July 15, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$15.99</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Electricity Bill</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Utilities</Badge>
-                      </TableCell>
-                      <TableCell>Monthly (20th)</TableCell>
-                      <TableCell>July 20, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$85.00</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Gym Membership</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Health & Fitness</Badge>
-                      </TableCell>
-                      <TableCell>Monthly (5th)</TableCell>
-                      <TableCell>July 5, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$50.00</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Freelance Income</TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Income</Badge>
-                      </TableCell>
-                      <TableCell>Weekly (Friday)</TableCell>
-                      <TableCell>June 23, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$250.00</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Phone Bill</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Utilities</Badge>
-                      </TableCell>
-                      <TableCell>Monthly (22nd)</TableCell>
-                      <TableCell>July 22, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$65.00</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    {recurringTransactions.map((rec) => {
+                      const firstTransaction = rec.transactions?.[0];
+                      const amount = firstTransaction?.amount || 0;
+                      const isIncome = amount > 0;
+                      const category =
+                        firstTransaction?.categoryId ?? "Uncategorized";
+
+                      return (
+                        <TableRow key={rec.periodicTransactionId}>
+                          <TableCell className="font-medium">
+                            {firstTransaction?.description || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                isIncome
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }
+                            >
+                              {isIncome ? "Income" : category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{rec.frequency}</TableCell>
+                          <TableCell>
+                            {rec.startDate
+                              ? new Date(rec.startDate).toLocaleDateString()
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              "text-right",
+                              isIncome ? "text-green-600" : "text-destructive"
+                            )}
+                          >
+                            {isIncome ? "+" : "-"}${Math.abs(amount).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Edit</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <Trash className="h-4 w-4" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -316,7 +286,9 @@ export default function RecurringTransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Recurring Income</CardTitle>
-                <CardDescription>Showing all your recurring income sources</CardDescription>
+                <CardDescription>
+                  Showing all your recurring income sources
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -334,18 +306,30 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Salary</TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Income</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Income
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (30th)</TableCell>
                       <TableCell>June 30, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$4,500.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$4,500.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -353,20 +337,34 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Freelance Income</TableCell>
+                      <TableCell className="font-medium">
+                        Freelance Income
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Income</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Income
+                        </Badge>
                       </TableCell>
                       <TableCell>Weekly (Friday)</TableCell>
                       <TableCell>June 23, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$250.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$250.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -374,20 +372,34 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Dividend Payment</TableCell>
+                      <TableCell className="font-medium">
+                        Dividend Payment
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Investment</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Investment
+                        </Badge>
                       </TableCell>
                       <TableCell>Quarterly</TableCell>
                       <TableCell>July 15, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$320.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$320.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -395,20 +407,34 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Rental Income</TableCell>
+                      <TableCell className="font-medium">
+                        Rental Income
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Real Estate</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Real Estate
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (1st)</TableCell>
                       <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$800.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$800.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -425,7 +451,9 @@ export default function RecurringTransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Recurring Expenses</CardTitle>
-                <CardDescription>Showing all your recurring expenses</CardDescription>
+                <CardDescription>
+                  Showing all your recurring expenses
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -443,18 +471,30 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Rent</TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Housing</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Housing
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (1st)</TableCell>
                       <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$1,200.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$1,200.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -464,18 +504,30 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Netflix</TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Entertainment</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Entertainment
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (15th)</TableCell>
                       <TableCell>July 15, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$15.99</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$15.99
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -483,20 +535,34 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Electricity Bill</TableCell>
+                      <TableCell className="font-medium">
+                        Electricity Bill
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Utilities</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Utilities
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (20th)</TableCell>
                       <TableCell>July 20, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$85.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$85.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -504,20 +570,34 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Gym Membership</TableCell>
+                      <TableCell className="font-medium">
+                        Gym Membership
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Health & Fitness</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Health & Fitness
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (5th)</TableCell>
                       <TableCell>July 5, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$50.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$50.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -527,18 +607,30 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Phone Bill</TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Utilities</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Utilities
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (22nd)</TableCell>
                       <TableCell>July 22, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$65.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$65.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -548,18 +640,30 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Internet</TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Utilities</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Utilities
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (18th)</TableCell>
                       <TableCell>July 18, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$75.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$75.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -567,20 +671,34 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Car Insurance</TableCell>
+                      <TableCell className="font-medium">
+                        Car Insurance
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Insurance</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Insurance
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (10th)</TableCell>
                       <TableCell>July 10, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$120.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$120.00
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -590,18 +708,30 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Spotify</TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Entertainment</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Entertainment
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (12th)</TableCell>
                       <TableCell>July 12, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$9.99</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$9.99
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Edit className="h-4 w-4" />
                             <span className="sr-only">Edit</span>
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
                             <Trash className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                           </Button>
@@ -618,7 +748,9 @@ export default function RecurringTransactionsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>Upcoming Transactions</CardTitle>
-                <CardDescription>Transactions due in the next 7 days</CardDescription>
+                <CardDescription>
+                  Transactions due in the next 7 days
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -636,11 +768,15 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Salary</TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Income</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Income
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (30th)</TableCell>
                       <TableCell>June 30, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$4,500.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$4,500.00
+                      </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm">
                           Skip
@@ -648,13 +784,19 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Freelance Income</TableCell>
+                      <TableCell className="font-medium">
+                        Freelance Income
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Income</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Income
+                        </Badge>
                       </TableCell>
                       <TableCell>Weekly (Friday)</TableCell>
                       <TableCell>June 23, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$250.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$250.00
+                      </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm">
                           Skip
@@ -664,11 +806,15 @@ export default function RecurringTransactionsPage() {
                     <TableRow>
                       <TableCell className="font-medium">Rent</TableCell>
                       <TableCell>
-                        <Badge className="bg-red-100 text-red-800">Housing</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          Housing
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (1st)</TableCell>
                       <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">-$1,200.00</TableCell>
+                      <TableCell className="text-right text-destructive">
+                        -$1,200.00
+                      </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm">
                           Skip
@@ -676,13 +822,19 @@ export default function RecurringTransactionsPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Rental Income</TableCell>
+                      <TableCell className="font-medium">
+                        Rental Income
+                      </TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-800">Real Estate</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          Real Estate
+                        </Badge>
                       </TableCell>
                       <TableCell>Monthly (1st)</TableCell>
                       <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">+$800.00</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        +$800.00
+                      </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm">
                           Skip
@@ -698,18 +850,25 @@ export default function RecurringTransactionsPage() {
       </div>
 
       {/* Add Recurring Transaction Dialog */}
-      <Dialog open={showAddRecurringDialog} onOpenChange={setShowAddRecurringDialog}>
+      <Dialog
+        open={showAddRecurringDialog}
+        onOpenChange={setShowAddRecurringDialog}
+      >
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Add Recurring Transaction</DialogTitle>
             <DialogDescription>
-              Set up a new recurring transaction to track regular income or expenses.
+              Set up a new recurring transaction to track regular income or
+              expenses.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="transaction-name">Transaction Name</Label>
-              <Input id="transaction-name" placeholder="e.g. Rent, Salary, Netflix, etc." />
+              <Input
+                id="transaction-name"
+                placeholder="e.g. Rent, Salary, Netflix, etc."
+              />
             </div>
 
             <div className="grid gap-2">
@@ -736,7 +895,9 @@ export default function RecurringTransactionsPage() {
               <div className="grid gap-2">
                 <Label htmlFor="amount">Amount</Label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                    $
+                  </span>
                   <Input id="amount" placeholder="0.00" className="pl-7" />
                 </div>
               </div>
@@ -804,30 +965,45 @@ export default function RecurringTransactionsPage() {
 
             <div className="flex items-center gap-2">
               <Switch id="auto-track" />
-              <Label htmlFor="auto-track">Automatically track this transaction</Label>
+              <Label htmlFor="auto-track">
+                Automatically track this transaction
+              </Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddRecurringDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddRecurringDialog(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => setShowAddRecurringDialog(false)}>Add Recurring Transaction</Button>
+            <Button onClick={() => setShowAddRecurringDialog(false)}>
+              Add Recurring Transaction
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Projection Dialog */}
-      <Dialog open={showProjectionDialog} onOpenChange={setShowProjectionDialog}>
+      <Dialog
+        open={showProjectionDialog}
+        onOpenChange={setShowProjectionDialog}
+      >
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Cash Flow Projections</DialogTitle>
-            <DialogDescription>View your projected account balances based on recurring transactions.</DialogDescription>
+            <DialogDescription>
+              View your projected account balances based on recurring
+              transactions.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">Projection Period</h3>
-                <p className="text-xs text-muted-foreground">June 20 - July 20, 2023</p>
+                <p className="text-xs text-muted-foreground">
+                  June 20 - July 20, 2023
+                </p>
               </div>
               <Select defaultValue="30">
                 <SelectTrigger className="w-[180px]">
@@ -847,11 +1023,17 @@ export default function RecurringTransactionsPage() {
               <div className="flex items-center justify-between bg-muted p-4">
                 <div className="grid gap-1">
                   <h3 className="text-sm font-medium">Checking Account</h3>
-                  <p className="text-xs text-muted-foreground">Bank of America</p>
+                  <p className="text-xs text-muted-foreground">
+                    Bank of America
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium">Current Balance: $5,240.12</p>
-                  <p className="text-xs text-muted-foreground">Projected on July 20: $7,125.13</p>
+                  <p className="text-sm font-medium">
+                    Current Balance: $5,240.12
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Projected on July 20: $7,125.13
+                  </p>
                 </div>
               </div>
               <div className="p-4">
@@ -864,7 +1046,9 @@ export default function RecurringTransactionsPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <p className="text-sm">Freelance Income</p>
-                        <Badge className="bg-green-100 text-green-800">+$250.00</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          +$250.00
+                        </Badge>
                       </div>
                       <p className="text-sm font-medium">$5,490.12</p>
                     </div>
@@ -877,7 +1061,9 @@ export default function RecurringTransactionsPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <p className="text-sm">Salary</p>
-                        <Badge className="bg-green-100 text-green-800">+$4,500.00</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          +$4,500.00
+                        </Badge>
                       </div>
                       <p className="text-sm font-medium">$9,990.12</p>
                     </div>
@@ -890,7 +1076,9 @@ export default function RecurringTransactionsPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <p className="text-sm">Rent</p>
-                        <Badge className="bg-red-100 text-red-800">-$1,200.00</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          -$1,200.00
+                        </Badge>
                       </div>
                       <p className="text-sm font-medium">$8,790.12</p>
                     </div>
@@ -903,7 +1091,9 @@ export default function RecurringTransactionsPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <p className="text-sm">Rental Income</p>
-                        <Badge className="bg-green-100 text-green-800">+$800.00</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          +$800.00
+                        </Badge>
                       </div>
                       <p className="text-sm font-medium">$9,590.12</p>
                     </div>
@@ -916,13 +1106,17 @@ export default function RecurringTransactionsPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <p className="text-sm">Gym Membership</p>
-                        <Badge className="bg-red-100 text-red-800">-$50.00</Badge>
+                        <Badge className="bg-red-100 text-red-800">
+                          -$50.00
+                        </Badge>
                       </div>
                       <p className="text-sm font-medium">$9,540.12</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">... and 8 more transactions</p>
+                    <p className="text-sm text-muted-foreground">
+                      ... and 8 more transactions
+                    </p>
                     <Button variant="outline" size="sm">
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Refresh Projection
@@ -935,16 +1129,23 @@ export default function RecurringTransactionsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">Projected Net Cash Flow</h3>
-                <p className="text-xs text-muted-foreground">For the selected period</p>
+                <p className="text-xs text-muted-foreground">
+                  For the selected period
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-lg font-bold text-green-600">+$1,885.01</p>
-                <p className="text-xs text-muted-foreground">$5,870.00 income, $3,984.99 expenses</p>
+                <p className="text-xs text-muted-foreground">
+                  $5,870.00 income, $3,984.99 expenses
+                </p>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowProjectionDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowProjectionDialog(false)}
+            >
               Close
             </Button>
             <Button>
@@ -955,6 +1156,5 @@ export default function RecurringTransactionsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-

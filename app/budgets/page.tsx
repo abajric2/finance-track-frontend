@@ -696,7 +696,7 @@ export default function BudgetsPage() {
           );
         })()}
 
-      <ToastContainer
+      {/* <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -707,7 +707,7 @@ export default function BudgetsPage() {
         draggable
         pauseOnHover
         theme="light"
-      />
+      />*/}
     </div>
   );
 }

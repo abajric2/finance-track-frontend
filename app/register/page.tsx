@@ -145,7 +145,7 @@ export default function RegisterPage() {
       </Card>
 
       {/* Toast container */}
-      <ToastContainer
+      {/*    <ToastContainer
         position="top-right"
         autoClose={2500}
         hideProgressBar={false}
@@ -154,7 +154,7 @@ export default function RegisterPage() {
         draggable
         pauseOnFocusLoss
         theme="light"
-      />
+      />*/}
     </div>
   );
 }

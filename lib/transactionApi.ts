@@ -1,5 +1,5 @@
 import { Category } from "@/types/category";
-import { Transaction } from "@/types/transaction";
+import { PeriodicTransaction, Transaction } from "@/types/transaction";
 import { fetchWithAuth } from "./fetchWithAuth";
 import { getAccountsByUserId } from "./userApi";
 
@@ -52,4 +52,42 @@ export async function createTransaction(transaction: Partial<Transaction>) {
   }
 
   return res.json();
+}
+
+export async function getUserPeriodicTransactions(
+  userId: number
+): Promise<PeriodicTransaction[]> {
+  const accounts = await getAccountsByUserId(userId);
+  const periodicIds = new Set<number>();
+
+  await Promise.all(
+    accounts.map(async (account) => {
+      const res = await fetchWithAuth(
+        `${TRANSACTION_URL}/account/${account.accountUuid}`
+      );
+      if (!res.ok) return;
+
+      const transactions: Transaction[] = await res.json();
+      console.log("trrrrr", transactions);
+      transactions.forEach((tx) => {
+        if (tx.periodicTransactionId !== null) {
+          periodicIds.add(tx.periodicTransactionId);
+        }
+      });
+    })
+  );
+
+  const periodicDetails: PeriodicTransaction[] = [];
+
+  await Promise.all(
+    Array.from(periodicIds).map(async (id) => {
+      const res = await fetchWithAuth(`${TRANSACTION_URL}/periodic/${id}`);
+      if (res.ok) {
+        const detail: PeriodicTransaction = await res.json();
+        periodicDetails.push(detail);
+      }
+    })
+  );
+  console.log("Per d", periodicDetails);
+  return periodicDetails;
 }
