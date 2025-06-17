@@ -279,9 +279,11 @@ export default function TransactionsPage() {
                         </TableCell>
                         <TableCell
                           className={`text-right ${
-                            transaction.amount < 0
-                              ? "text-destructive"
-                              : "text-green-600"
+                            categories[
+                              transaction.categoryId
+                            ]?.type.toLowerCase() === "income"
+                              ? "text-green-600"
+                              : "text-destructive"
                           }`}
                         >
                           ${Math.abs(transaction.amount).toFixed(2)}
@@ -336,9 +338,11 @@ export default function TransactionsPage() {
                           </TableCell>
                           <TableCell
                             className={`text-right ${
-                              transaction.amount < 0
-                                ? "text-destructive"
-                                : "text-green-600"
+                              categories[
+                                transaction.categoryId
+                              ]?.type.toLowerCase() === "income"
+                                ? "text-green-600"
+                                : "text-destructive"
                             }`}
                           >
                             ${Math.abs(transaction.amount).toFixed(2)}
@@ -393,9 +397,11 @@ export default function TransactionsPage() {
                           </TableCell>
                           <TableCell
                             className={`text-right ${
-                              transaction.amount < 0
-                                ? "text-destructive"
-                                : "text-green-600"
+                              categories[
+                                transaction.categoryId
+                              ]?.type.toLowerCase() === "income"
+                                ? "text-green-600"
+                                : "text-destructive"
                             }`}
                           >
                             ${Math.abs(transaction.amount).toFixed(2)}
