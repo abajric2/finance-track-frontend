@@ -176,7 +176,7 @@ export function MainNav() {
               variant="outline"
               size="sm"
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-1 text-amber-600 border-amber-600 hover:bg-amber-700"
+              className="flex items-center gap-1 text-amber-600 border-amber-600 hover:bg-[#d977064c]"
             >
               <Sparkles className="w-4 h-4" />
               Go Premium

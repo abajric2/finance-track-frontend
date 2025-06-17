@@ -21,12 +21,12 @@ export default function ClientLayoutWrapper({
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop={false}
-        closeOnClick
-        rtl={false}
+        closeOnClick={false}
         pauseOnFocusLoss
         draggable
-        pauseOnHover
+        pauseOnHover={true}
         theme="light"
+        style={{ zIndex: 999999 }}
       />
     </div>
   );

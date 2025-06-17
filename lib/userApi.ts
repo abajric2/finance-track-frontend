@@ -108,7 +108,7 @@ export async function updateAccount(account: Account): Promise<void> {
       }),
     }
   );
-  if (!res.ok) throw new Error("Failed to update account");
+  if (!res.ok) throw new Error(`Failed to update account: ${await res.text()}`);
 }
 
 export async function deleteAccount(accountId: number): Promise<void> {
@@ -118,7 +118,7 @@ export async function deleteAccount(accountId: number): Promise<void> {
       method: "DELETE",
     }
   );
-  if (!res.ok) throw new Error("Failed to delete account");
+  if (!res.ok) throw new Error(`Failed to delete account: ${await res.text()}`);
 }
 
 let cachedCurrencies: CurrencyEntity[] | null = null;

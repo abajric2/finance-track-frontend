@@ -235,9 +235,6 @@ export default function GoalsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{activeGoalsCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                2 goals on track, 3 need attention
-              </p>
             </CardContent>
           </Card>
           <Card>
