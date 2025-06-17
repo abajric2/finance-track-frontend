@@ -239,3 +239,15 @@ export async function updateBudgetDetails(data: {
 
   return await res.json();
 }
+
+export async function getCategoryById(
+  categoryId: number
+): Promise<CategoryDTO> {
+  const res = await fetchWithAuth(
+    `${BASE_URL}/api/budgets/categories/${categoryId}`
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch category by ID: ${res.statusText}`);
+  }
+  return await res.json();
+}

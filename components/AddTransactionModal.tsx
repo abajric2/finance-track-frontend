@@ -22,7 +22,11 @@ import { createTransaction, getCategories } from "@/lib/transactionApi";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
-import { getBudgetsByUserUuid, incrementCurrentAmount } from "@/lib/budgetApi";
+import {
+  getBudgetsByUserUuid,
+  getCategoryById,
+  incrementCurrentAmount,
+} from "@/lib/budgetApi";
 import {
   createGoalTransaction,
   getGoalsByUserUuid,
@@ -74,9 +78,28 @@ export default function AddTransactionModal({
           toast.error("User not found. Please log in again.");
           return;
         }
+
         try {
           const budgets = await getBudgetsByUserUuid(user.userUuid);
-          setBudgets(budgets);
+
+          const categoryMap: Record<number, string> = {};
+          for (const budget of budgets) {
+            if (budget.categoryId && !categoryMap[budget.categoryId]) {
+              try {
+                const category = await getCategoryById(budget.categoryId);
+                categoryMap[budget.categoryId] = category.name.split("---")[0];
+              } catch (err) {
+                console.error("Error fetching category:", err);
+              }
+            }
+          }
+
+          const enrichedBudgets = budgets.map((budget) => ({
+            ...budget,
+            categoryName: categoryMap[budget.categoryId] || "Unknown",
+          }));
+
+          setBudgets(enrichedBudgets);
 
           const goals = await getGoalsByUserUuid(user.userUuid);
           setGoals(goals);
@@ -297,7 +320,8 @@ export default function AddTransactionModal({
               <SelectContent>
                 {budgets.map((budget) => (
                   <SelectItem key={budget.budgetUuid} value={budget.budgetUuid}>
-                    {budget.period} – {budget.amount} BAM
+                    {budget.categoryName} – {budget.period} – {budget.amount}{" "}
+                    BAM
                   </SelectItem>
                 ))}
               </SelectContent>
