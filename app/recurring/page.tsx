@@ -64,7 +64,10 @@ import {
   Transaction,
 } from "@/types/transaction";
 import { getCurrentUser } from "@/lib/userApi";
-import { getExtendedRecurringTransactions } from "@/lib/transactionApi";
+import {
+  getCategories,
+  getExtendedRecurringTransactions,
+} from "@/lib/transactionApi";
 import { getNextRecurringDate } from "@/utils/getNextRecurringDate";
 
 export default function RecurringTransactionsPage() {
@@ -73,24 +76,40 @@ export default function RecurringTransactionsPage() {
   const [recurringTransactions, setRecurringTransactions] = useState<
     ExtendedRecurringTransaction[]
   >([]);
+  const [categories, setCategories] = useState<
+    Record<number, { name: string; type: string }>
+  >({});
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user?.userId) return;
 
-    getExtendedRecurringTransactions(user.userId)
-      .then(setRecurringTransactions)
+    Promise.all([
+      getExtendedRecurringTransactions(user.userId),
+      getCategories(),
+    ])
+      .then(([recTransactions, fetchedCategories]) => {
+        setRecurringTransactions(recTransactions);
+
+        const categoryMap: Record<number, { name: string; type: string }> = {};
+        fetchedCategories.forEach((c) => {
+          categoryMap[c.categoryId] = { name: c.name, type: c.type };
+        });
+        setCategories(categoryMap);
+      })
       .catch((err) =>
         console.error("Error fetching extended recurring transactions", err)
       );
   }, []);
 
   const recurringIncome = recurringTransactions.filter(
-    (rec) => (rec.transaction?.amount ?? 0) > 0
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "income"
   );
 
   const recurringExpenses = recurringTransactions.filter(
-    (rec) => (rec.transaction?.amount ?? 0) < 0
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "expense"
   );
 
   return (
@@ -205,6 +224,7 @@ export default function RecurringTransactionsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Next Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -212,10 +232,12 @@ export default function RecurringTransactionsPage() {
                     {recurringTransactions.map((rec) => {
                       const firstTransaction = rec.transaction;
                       const amount = firstTransaction?.amount || 0;
-                      const isIncome = amount > 0;
                       const category =
-                        firstTransaction?.categoryId ?? "Uncategorized";
-
+                        categories[firstTransaction?.categoryId]?.name;
+                      const isIncome =
+                        categories[
+                          firstTransaction?.categoryId
+                        ]?.type.toLocaleLowerCase() === "income";
                       return (
                         <TableRow
                           key={`${rec.periodic.periodicTransactionId}-${rec.transaction.transactionId}`}
@@ -223,17 +245,7 @@ export default function RecurringTransactionsPage() {
                           <TableCell className="font-medium">
                             {firstTransaction?.description || "N/A"}
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                isIncome
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }
-                            >
-                              {isIncome ? "Income" : "Expense"}
-                            </Badge>
-                          </TableCell>
+                          <TableCell>{category}</TableCell>
                           <TableCell>{rec.periodic.frequency}</TableCell>
                           <TableCell>
                             {rec.periodic.startDate && rec.periodic.frequency
@@ -243,14 +255,16 @@ export default function RecurringTransactionsPage() {
                                 )
                               : "N/A"}
                           </TableCell>
-
+                          <TableCell>
+                            {isIncome ? "Income" : "Expense"}
+                          </TableCell>
                           <TableCell
                             className={cn(
                               "text-right",
                               isIncome ? "text-green-600" : "text-destructive"
                             )}
                           >
-                            {isIncome ? "+" : "-"}${Math.abs(amount).toFixed(2)}
+                            ${Math.abs(amount).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       );
@@ -260,7 +274,6 @@ export default function RecurringTransactionsPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="income" className="mt-4">
             <Card>
               <CardHeader className="pb-2">
@@ -277,28 +290,28 @@ export default function RecurringTransactionsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Next Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {recurringIncome.map((rec) => {
-                      const firstTransaction = rec.transaction;
-                      const amount = firstTransaction?.amount || 0;
+                      const tx = rec.transaction;
+                      const amount = tx?.amount || 0;
                       const category =
-                        firstTransaction?.categoryId ?? "Uncategorized";
+                        categories[tx?.categoryId]?.name || "Uncategorized";
+                      const isIncome =
+                        categories[tx?.categoryId]?.type?.toLowerCase() ===
+                        "income";
 
                       return (
                         <TableRow
-                          key={`${rec.periodic.periodicTransactionId}-${rec.transaction.transactionId}`}
+                          key={`${rec.periodic.periodicTransactionId}-${tx.transactionId}`}
                         >
                           <TableCell className="font-medium">
-                            {firstTransaction?.description || "N/A"}
+                            {tx?.description || "N/A"}
                           </TableCell>
-                          <TableCell>
-                            <Badge className="bg-green-100 text-green-800">
-                              Income
-                            </Badge>
-                          </TableCell>
+                          <TableCell>{category}</TableCell>
                           <TableCell>{rec.periodic.frequency}</TableCell>
                           <TableCell>
                             {rec.periodic.startDate && rec.periodic.frequency
@@ -308,8 +321,15 @@ export default function RecurringTransactionsPage() {
                                 )
                               : "N/A"}
                           </TableCell>
-                          <TableCell className="text-right text-green-600">
-                            +${Math.abs(amount).toFixed(2)}
+                          <TableCell>
+                            {isIncome ? "Income" : "Expense"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${
+                              isIncome ? "text-green-600" : "text-destructive"
+                            }`}
+                          >
+                            ${Math.abs(amount).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       );
@@ -336,26 +356,28 @@ export default function RecurringTransactionsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Next Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {recurringExpenses.map((rec) => {
                       const tx = rec.transaction;
-                      const amount = tx?.amount ?? 0;
+                      const amount = tx?.amount || 0;
+                      const category =
+                        categories[tx?.categoryId]?.name || "Uncategorized";
+                      const isIncome =
+                        categories[tx?.categoryId]?.type?.toLowerCase() ===
+                        "income";
 
                       return (
                         <TableRow
-                          key={`${rec.periodic.periodicTransactionId}-${rec.transaction.transactionId}`}
+                          key={`${rec.periodic.periodicTransactionId}-${tx.transactionId}`}
                         >
                           <TableCell className="font-medium">
                             {tx?.description || "N/A"}
                           </TableCell>
-                          <TableCell>
-                            <Badge className="bg-red-100 text-red-800">
-                              {tx?.categoryId || "Uncategorized"}
-                            </Badge>
-                          </TableCell>
+                          <TableCell>{category}</TableCell>
                           <TableCell>{rec.periodic.frequency}</TableCell>
                           <TableCell>
                             {rec.periodic.startDate && rec.periodic.frequency
@@ -365,8 +387,15 @@ export default function RecurringTransactionsPage() {
                                 )
                               : "N/A"}
                           </TableCell>
-                          <TableCell className="text-right text-destructive">
-                            -${Math.abs(amount).toFixed(2)}
+                          <TableCell>
+                            {isIncome ? "Income" : "Expense"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${
+                              isIncome ? "text-green-600" : "text-destructive"
+                            }`}
+                          >
+                            ${Math.abs(amount).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       );
