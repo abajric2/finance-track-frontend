@@ -83,7 +83,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import ManageCategoriesModal from "@/components/ManageCategoriesModal";
-import { ToastContainer } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import CreateBudgetModal from "@/components/CreateBudgetModal";
 import { UserResponse } from "@/types/user";
 import { SharedBudgetCard } from "@/components/SharedBudgetCard";
@@ -526,11 +526,10 @@ export default function BudgetsPage() {
                       }));
 
                       setEmailToShare("");
+                      toast.success("Budget successfully shared.");
                     } catch (err) {
                       console.error(err);
-                      alert(
-                        "Failed to share budget. Check console for details."
-                      );
+                      toast.error("Failed to share budget. Please try again.");
                     }
                   }}
                 >
