@@ -2,6 +2,7 @@ import { BudgetResponse, BudgetUserDTO } from "@/types/budget";
 import { fetchWithAuth } from "./fetchWithAuth";
 import { CategoryDTO } from "@/types/budgetCategory";
 import { UserResponse } from "@/types/user";
+import { getCurrentUser } from "./userApi";
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/budgets`;
 
@@ -39,24 +40,24 @@ export async function incrementCurrentAmount(
   return await res.json();
 }
 
-export async function getAllCategories(): Promise<CategoryDTO[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/categories`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch categories: ${res.statusText}`);
-  }
-  return await res.json();
-}
-
 export async function createCategory(data: {
   name: string;
   type: string;
 }): Promise<CategoryDTO> {
+  const user = getCurrentUser();
+  if (!user) throw new Error("User not found");
+
+  const payload = {
+    name: `${data.name}---${user.userUuid}`,
+    type: data.type,
+  };
+
   const res = await fetchWithAuth(`${BASE_URL}/api/budgets/categories`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
@@ -66,8 +67,30 @@ export async function createCategory(data: {
   return await res.json();
 }
 
+export async function getAllCategories(): Promise<CategoryDTO[]> {
+  const user = getCurrentUser();
+  if (!user) throw new Error("User not found");
+
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/categories`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch categories: ${res.statusText}`);
+  }
+
+  const allCategories: CategoryDTO[] = await res.json();
+
+  return allCategories
+    .filter((cat) => {
+      const parts = cat.name.split("---");
+      return parts[1] === user.userUuid;
+    })
+    .map((cat) => ({
+      ...cat,
+      name: cat.name.split("---")[0],
+    }));
+}
+
 export async function createBudget(data: {
-  owner: string; // UUID
+  owner: string;
   amount: number;
   period: string;
   categoryId: number;
