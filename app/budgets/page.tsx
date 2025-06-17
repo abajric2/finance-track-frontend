@@ -111,6 +111,7 @@ export default function BudgetsPage() {
 
   const categoryMap = useMemo(() => {
     const map = new Map<number, string>();
+    console.log("cattttt ", categories);
     categories.forEach((cat) => {
       map.set(cat.categoryId, cat.name);
     });
@@ -329,6 +330,7 @@ export default function BudgetsPage() {
                 )
                 .map((budget) => {
                   const isOver = budget.currentAmount > budget.amount;
+                  console.log("eeee ", budget);
                   const categoryName =
                     categoryMap.get(budget.categoryId) ?? "Unknown Category";
 
