@@ -25,3 +25,13 @@ export interface PeriodicTransaction {
   endDate: string;
   transactions: Transaction[];
 }
+
+export interface ExtendedRecurringTransaction {
+  transaction: Transaction;
+  periodic: {
+    periodicTransactionId: number;
+    frequency: string;
+    startDate: string;
+    endDate: string;
+  };
+}

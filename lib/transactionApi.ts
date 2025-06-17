@@ -1,5 +1,9 @@
 import { Category } from "@/types/category";
-import { PeriodicTransaction, Transaction } from "@/types/transaction";
+import {
+  ExtendedRecurringTransaction,
+  PeriodicTransaction,
+  Transaction,
+} from "@/types/transaction";
 import { fetchWithAuth } from "./fetchWithAuth";
 import { getAccountsByUserId } from "./userApi";
 
@@ -53,40 +57,42 @@ export async function createTransaction(transaction: Partial<Transaction>) {
   return res.json();
 }
 
-export async function getUserPeriodicTransactions(
+export async function getExtendedRecurringTransactions(
   userId: number
-): Promise<PeriodicTransaction[]> {
-  const accounts = await getAccountsByUserId(userId);
-  const periodicIds = new Set<number>();
+): Promise<ExtendedRecurringTransaction[]> {
+  const allTransactions = await getTransactions(userId);
+  const recurring = allTransactions.filter(
+    (tx) => tx.periodicTransactionId !== null
+  );
 
-  await Promise.all(
-    accounts.map(async (account) => {
+  const extended = await Promise.all(
+    recurring.map(async (tx) => {
       const res = await fetchWithAuth(
-        `${TRANSACTION_URL}/account/${account.accountUuid}`
+        `${TRANSACTION_URL}/periodic/${tx.periodicTransactionId}`
       );
-      if (!res.ok) return;
 
-      const transactions: Transaction[] = await res.json();
-      console.log("trrrrr", transactions);
-      transactions.forEach((tx) => {
-        if (tx.periodicTransactionId !== null) {
-          periodicIds.add(tx.periodicTransactionId);
-        }
-      });
-    })
-  );
-
-  const periodicDetails: PeriodicTransaction[] = [];
-
-  await Promise.all(
-    Array.from(periodicIds).map(async (id) => {
-      const res = await fetchWithAuth(`${TRANSACTION_URL}/periodic/${id}`);
-      if (res.ok) {
-        const detail: PeriodicTransaction = await res.json();
-        periodicDetails.push(detail);
+      if (!res.ok) {
+        console.warn(
+          `Failed to fetch periodic transaction ${tx.periodicTransactionId}`
+        );
+        return null;
       }
+
+      const periodicData = await res.json();
+      console.log("periii ", periodicData);
+      return {
+        transaction: tx,
+        periodic: {
+          periodicTransactionId: periodicData.periodicTransactionId,
+          frequency: periodicData.frequency,
+          startDate: periodicData.startDate,
+          endDate: periodicData.endDate,
+        },
+      };
     })
   );
-  console.log("Per d", periodicDetails);
-  return periodicDetails;
+  console.log("exxxxx", extended);
+  return extended.filter(
+    (item): item is ExtendedRecurringTransaction => item !== null
+  );
 }

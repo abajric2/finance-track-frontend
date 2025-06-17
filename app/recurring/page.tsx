@@ -58,25 +58,29 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { PeriodicTransaction } from "@/types/transaction";
-import { getUserPeriodicTransactions } from "@/lib/transactionApi";
+import {
+  ExtendedRecurringTransaction,
+  PeriodicTransaction,
+  Transaction,
+} from "@/types/transaction";
 import { getCurrentUser } from "@/lib/userApi";
+import { getExtendedRecurringTransactions } from "@/lib/transactionApi";
 
 export default function RecurringTransactionsPage() {
   const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false);
   const [showProjectionDialog, setShowProjectionDialog] = useState(false);
   const [recurringTransactions, setRecurringTransactions] = useState<
-    PeriodicTransaction[]
+    ExtendedRecurringTransaction[]
   >([]);
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user?.userId) return;
 
-    getUserPeriodicTransactions(user.userId)
+    getExtendedRecurringTransactions(user.userId)
       .then(setRecurringTransactions)
       .catch((err) =>
-        console.error("Error fetching recurring transactions", err)
+        console.error("Error fetching extended recurring transactions", err)
       );
   }, []);
 
@@ -217,14 +221,14 @@ export default function RecurringTransactionsPage() {
                   </TableHeader>
                   <TableBody>
                     {recurringTransactions.map((rec) => {
-                      const firstTransaction = rec.transactions?.[0];
+                      const firstTransaction = rec.transaction;
                       const amount = firstTransaction?.amount || 0;
                       const isIncome = amount > 0;
                       const category =
                         firstTransaction?.categoryId ?? "Uncategorized";
 
                       return (
-                        <TableRow key={rec.periodicTransactionId}>
+                        <TableRow key={rec.periodic.periodicTransactionId}>
                           <TableCell className="font-medium">
                             {firstTransaction?.description || "N/A"}
                           </TableCell>
@@ -239,10 +243,12 @@ export default function RecurringTransactionsPage() {
                               {isIncome ? "Income" : category}
                             </Badge>
                           </TableCell>
-                          <TableCell>{rec.frequency}</TableCell>
+                          <TableCell>{rec.periodic.frequency}</TableCell>
                           <TableCell>
-                            {rec.startDate
-                              ? new Date(rec.startDate).toLocaleDateString()
+                            {rec.periodic.startDate
+                              ? new Date(
+                                  rec.periodic.startDate
+                                ).toLocaleDateString()
                               : "N/A"}
                           </TableCell>
                           <TableCell
