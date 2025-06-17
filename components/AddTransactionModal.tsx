@@ -23,6 +23,7 @@ import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
 import { getBudgetsByUserUuid, incrementCurrentAmount } from "@/lib/budgetApi";
+import { getGoalsByUserUuid } from "@/lib/reportsApi";
 
 interface Props {
   open: boolean;
@@ -50,11 +51,13 @@ export default function AddTransactionModal({
   const [categories, setCategories] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
+  const [goals, setGoals] = useState<any[]>([]);
 
   const selectedCategory = categories.find(
     (cat) => String(cat.categoryId) === formData.categoryId
   );
   const isSaveCategory = selectedCategory?.name === "Save";
+  const activeGoals = goals.filter((goal) => goal.status === "ACTIVE");
 
   useEffect(() => {
     if (open) {
@@ -67,13 +70,15 @@ export default function AddTransactionModal({
           toast.error("User not found. Please log in again.");
           return;
         }
-
         try {
           const budgets = await getBudgetsByUserUuid(user.userUuid);
           setBudgets(budgets);
+
+          const goals = await getGoalsByUserUuid(user.userUuid);
+          setGoals(goals);
         } catch (err) {
-          console.error("Failed to fetch budgets:", err);
-          toast.error("Could not load budgets.");
+          console.error("Failed to fetch budgets or goals:", err);
+          toast.error("Could not load budgets or goals.");
         }
       })();
     }
@@ -205,10 +210,20 @@ export default function AddTransactionModal({
                 />
               </SelectTrigger>
               <SelectContent>
-                {/* Prazna lista za sad */}
-                <SelectItem value="__no-goals__" disabled>
-                  No goals available
-                </SelectItem>
+                {activeGoals.length > 0 ? (
+                  activeGoals.map((goal) => (
+                    <SelectItem
+                      key={goal.financialGoalId}
+                      value={String(goal.financialGoalId)}
+                    >
+                      {goal.name} - {goal.targetAmount} BAM
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="__no-goals__" disabled>
+                    No active goals available
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
