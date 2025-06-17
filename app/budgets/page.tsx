@@ -472,7 +472,19 @@ export default function BudgetsPage() {
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Share Budget: {selectedBudget}</DialogTitle>
+            <DialogTitle>
+              {(() => {
+                const budget = budgets.find(
+                  (b) => b.budgetId === selectedBudget
+                );
+                if (!budget) return "Share Budget";
+
+                const categoryName =
+                  categoryMapAllUsers.get(budget.categoryId) ??
+                  "Unknown Category";
+                return `${categoryName} · ${budget.period} · ${budget.amount} $ `;
+              })()}
+            </DialogTitle>
             <DialogDescription>
               Share your budget with family members or roommates to collaborate
               on financial planning.
