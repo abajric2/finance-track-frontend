@@ -14,12 +14,14 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/userApi";
 import { UserResponse } from "@/types/user";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,7 +42,6 @@ export default function LoginPage() {
         password: formData.password,
       });
 
-      // ✅ Osiguraj da je user spašen u localStorage
       const savedUser = localStorage.getItem("user");
 
       if (!savedUser) {
@@ -75,18 +76,26 @@ export default function LoginPage() {
               disabled={loading}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 relative">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               onChange={handleChange}
               value={formData.password}
               disabled={loading}
             />
+            <button
+              type="button"
+              className="absolute right-3 top-[38px] text-muted-foreground"
+              onClick={() => setShowPassword((prev) => !prev)}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
+
           {error && <p className="text-sm text-red-500">{error}</p>}
         </CardContent>
         <CardFooter className="flex justify-between items-center">
@@ -94,6 +103,16 @@ export default function LoginPage() {
             {loading ? "Logging in..." : "Login"}
           </Button>
         </CardFooter>
+        <div className="text-sm text-center mt-2 mb-5">
+          Don't have an account?{" "}
+          <button
+            onClick={() => router.push("/register")}
+            className="text-primary font-medium underline"
+            disabled={loading}
+          >
+            Register here
+          </button>
+        </div>
       </Card>
     </div>
   );

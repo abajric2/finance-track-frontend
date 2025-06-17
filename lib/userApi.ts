@@ -108,7 +108,7 @@ export async function updateAccount(account: Account): Promise<void> {
       }),
     }
   );
-  if (!res.ok) throw new Error("Failed to update account");
+  if (!res.ok) throw new Error(`Failed to update account: ${await res.text()}`);
 }
 
 export async function deleteAccount(accountId: number): Promise<void> {
@@ -118,7 +118,7 @@ export async function deleteAccount(accountId: number): Promise<void> {
       method: "DELETE",
     }
   );
-  if (!res.ok) throw new Error("Failed to delete account");
+  if (!res.ok) throw new Error(`Failed to delete account: ${await res.text()}`);
 }
 
 let cachedCurrencies: CurrencyEntity[] | null = null;
@@ -188,4 +188,31 @@ export async function getUserByEmail(email: string): Promise<UserResponse> {
   }
 
   return await res.json();
+}
+
+export async function upgradeUserToPremium(
+  userId: number
+): Promise<UserResponse> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/users/${userId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ role: "PAID" }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(
+      `Failed to upgrade user to premium: ${res.status} - ${errorText}`
+    );
+  }
+
+  const updatedUser: UserResponse = await res.json();
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+  }
+
+  return updatedUser;
 }

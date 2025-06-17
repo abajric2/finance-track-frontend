@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CurrencyEntity } from "@/types/currency";
+import { toast } from "react-toastify";
 
 interface Props {
   open: boolean;
@@ -65,10 +66,12 @@ export default function AddAccountModal({ open, onClose, onSuccess }: Props) {
         currencyCode: formData.currencyCode,
         userId: user.userId,
       });
+      toast.success("Account created successfully!");
       onSuccess();
       onClose();
     } catch (err) {
       console.error("Error creating account:", err);
+      toast.error("Failed to create account!");
     } finally {
       setLoading(false);
     }
@@ -77,75 +80,81 @@ export default function AddAccountModal({ open, onClose, onSuccess }: Props) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add Manual Account</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label>Name</Label>
-            <Input
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="e.g. My Savings"
-            />
-          </div>
-          <div>
-            <Label>Type</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value) =>
-                setFormData({ ...formData, type: value as AccountType })
-              }
+        <div className="pointer-events-auto">
+          <DialogHeader>
+            <DialogTitle>Add Manual Account</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="e.g. My Savings"
+              />
+            </div>
+            <div>
+              <Label>Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, type: value as AccountType })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0) + type.slice(1).toLowerCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Balance</Label>
+              <Input
+                type="number"
+                value={formData.balance}
+                onChange={(e) =>
+                  setFormData({ ...formData, balance: e.target.value })
+                }
+                placeholder="e.g. 1000"
+              />
+            </div>
+            <div>
+              <Label>Currency</Label>
+              <Select
+                value={formData.currencyCode}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, currencyCode: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencies.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      {currency.code} – {currency.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="w-full"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {accountTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type.charAt(0) + type.slice(1).toLowerCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {loading ? "Creating..." : "Create Account"}
+            </Button>
           </div>
-          <div>
-            <Label>Balance</Label>
-            <Input
-              type="number"
-              value={formData.balance}
-              onChange={(e) =>
-                setFormData({ ...formData, balance: e.target.value })
-              }
-              placeholder="e.g. 1000"
-            />
-          </div>
-          <div>
-            <Label>Currency</Label>
-            <Select
-              value={formData.currencyCode}
-              onValueChange={(value) =>
-                setFormData({ ...formData, currencyCode: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    {currency.code} – {currency.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleSubmit} disabled={loading} className="w-full">
-            {loading ? "Creating..." : "Create Account"}
-          </Button>
-        </div>
+        </div>{" "}
       </DialogContent>
     </Dialog>
   );

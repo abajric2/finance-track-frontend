@@ -19,6 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import { Account, AccountType } from "@/types/account";
 import { getCurrencies, updateAccount, deleteAccount } from "@/lib/userApi";
+import { toast } from "react-toastify";
 
 interface Props {
   open: boolean;
@@ -52,18 +53,36 @@ export default function ManageAccountModal({
 
   const handleUpdate = async () => {
     setLoading(true);
-    await updateAccount(form);
-    setLoading(false);
-    onSuccess();
-    onClose();
+    try {
+      await updateAccount(form);
+      toast.success("Account updated successfully!");
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error("Update error:", error);
+      toast.error(
+        error?.message || "An error occurred while updating the account."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async () => {
     setLoading(true);
-    await deleteAccount(form.accountId);
-    setLoading(false);
-    onSuccess();
-    onClose();
+    try {
+      await deleteAccount(form.accountId);
+      toast.success("Account deleted successfully!");
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      toast.error(
+        error?.message || "An error occurred while deleting the account."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

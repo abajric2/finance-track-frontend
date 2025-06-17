@@ -63,6 +63,7 @@ import {
   addUserToBudget,
   getAllCategories,
   getBudgetsByUserUuid,
+  getCategoriesAllUsers,
   getUsersByBudgetId,
   markBudgetAsShared,
 } from "@/lib/budgetApi";
@@ -82,7 +83,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import ManageCategoriesModal from "@/components/ManageCategoriesModal";
-import { ToastContainer } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import CreateBudgetModal from "@/components/CreateBudgetModal";
 import { UserResponse } from "@/types/user";
 import { SharedBudgetCard } from "@/components/SharedBudgetCard";
@@ -97,6 +98,10 @@ export default function BudgetsPage() {
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
+  const [categoriesAllUsers, setCategoriesAllUsers] = useState<CategoryDTO[]>(
+    []
+  );
+
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
   const [sharedUsers, setSharedUsers] = useState<
@@ -109,8 +114,18 @@ export default function BudgetsPage() {
   const [editBudgetId, setEditBudgetId] = useState<number | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const categoryMapAllUsers = useMemo(() => {
+    const map = new Map<number, string>();
+    console.log("cattttt allll", categoriesAllUsers);
+    categoriesAllUsers.forEach((cat) => {
+      map.set(cat.categoryId, cat.name);
+    });
+    return map;
+  }, [categoriesAllUsers]);
+
   const categoryMap = useMemo(() => {
     const map = new Map<number, string>();
+    console.log("cattttt ", categories);
     categories.forEach((cat) => {
       map.set(cat.categoryId, cat.name);
     });
@@ -135,10 +150,12 @@ export default function BudgetsPage() {
       Promise.all([
         getBudgetsByUserUuid(localUser.userUuid),
         getAllCategories(),
+        getCategoriesAllUsers(),
       ])
-        .then(async ([budgetsRes, categoriesRes]) => {
+        .then(async ([budgetsRes, categoriesRes, categoriesAllUsers]) => {
           setBudgets(budgetsRes);
           setCategories(categoriesRes);
+          setCategoriesAllUsers(categoriesAllUsers);
 
           const sharedBudgets = budgetsRes.filter((budget) => budget.shared);
 
@@ -221,10 +238,9 @@ export default function BudgetsPage() {
         </div>
 
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 md:w-auto">
+          <TabsList className="grid w-full grid-cols-2 md:w-auto">
             <TabsTrigger value="categories">All Budgets</TabsTrigger>
-            <TabsTrigger value="trends">Budget Trends</TabsTrigger>
-            <TabsTrigger value="planning">Budget Planning</TabsTrigger>
+
             <TabsTrigger value="shared">Shared Budgets</TabsTrigger>
           </TabsList>
 
@@ -288,7 +304,7 @@ export default function BudgetsPage() {
                           >
                             All Categories
                           </CommandItem>
-                          {Array.from(categoryMap.entries()).map(
+                          {Array.from(categoryMapAllUsers.entries()).map(
                             ([id, name]) => (
                               <CommandItem
                                 key={id}
@@ -330,8 +346,10 @@ export default function BudgetsPage() {
                 )
                 .map((budget) => {
                   const isOver = budget.currentAmount > budget.amount;
+                  console.log("eeeejjjj ", budget);
                   const categoryName =
-                    categoryMap.get(budget.categoryId) ?? "Unknown Category";
+                    categoryMapAllUsers.get(budget.categoryId) ??
+                    "Unknown Categoryaaa";
 
                   return (
                     <BudgetCategory
@@ -371,100 +389,6 @@ export default function BudgetsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="trends" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Budget Trends</CardTitle>
-                <CardDescription>
-                  Compare your spending over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[400px] flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <ArrowUpDown className="mx-auto h-12 w-12 mb-4" />
-                  <p>Budget trend visualization would appear here</p>
-                  <p className="text-sm">
-                    Showing monthly spending patterns and trends
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="planning" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Budget Planning</CardTitle>
-                <CardDescription>
-                  Plan your budget for upcoming months
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <CustomLabel>Month</CustomLabel>
-                      <Select defaultValue="july-2023">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="july-2023">July 2023</SelectItem>
-                          <SelectItem value="august-2023">
-                            August 2023
-                          </SelectItem>
-                          <SelectItem value="september-2023">
-                            September 2023
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <CustomLabel>Total Budget</CustomLabel>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                          $
-                        </span>
-                        <Input
-                          placeholder="5,000.00"
-                          className="pl-7"
-                          defaultValue="5,000.00"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <CustomLabel>Budget Categories</CustomLabel>
-                      <Button variant="outline" size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Category
-                      </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <BudgetPlanningItem name="Housing" amount={1500} />
-                      <BudgetPlanningItem name="Food & Dining" amount={800} />
-                      <BudgetPlanningItem name="Transportation" amount={400} />
-                      <BudgetPlanningItem name="Entertainment" amount={300} />
-                      <BudgetPlanningItem name="Shopping" amount={500} />
-                      <BudgetPlanningItem name="Utilities" amount={250} />
-                      <BudgetPlanningItem
-                        name="Health & Fitness"
-                        amount={200}
-                      />
-                      <BudgetPlanningItem name="Personal Care" amount={150} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="ml-auto">Save Budget Plan</Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="shared" className="space-y-4 mt-4">
             <Card>
               <CardHeader>
@@ -487,7 +411,7 @@ export default function BudgetsPage() {
                     <TabsContent value="by-you" className="mt-4 space-y-4">
                       {sharedByYou.map((budget) => {
                         const categoryName =
-                          categoryMap.get(budget.categoryId) ??
+                          categoryMapAllUsers.get(budget.categoryId) ??
                           "Unknown Category";
                         return (
                           <SharedBudgetCard
@@ -514,7 +438,7 @@ export default function BudgetsPage() {
                   <TabsContent value="with-you" className="mt-4 space-y-4">
                     {sharedWithYou.map((budget) => {
                       const categoryName =
-                        categoryMap.get(budget.categoryId) ??
+                        categoryMapAllUsers.get(budget.categoryId) ??
                         "Unknown Category";
                       return (
                         <SharedBudgetCard
@@ -548,7 +472,19 @@ export default function BudgetsPage() {
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Share Budget: {selectedBudget}</DialogTitle>
+            <DialogTitle>
+              {(() => {
+                const budget = budgets.find(
+                  (b) => b.budgetId === selectedBudget
+                );
+                if (!budget) return "Share Budget";
+
+                const categoryName =
+                  categoryMapAllUsers.get(budget.categoryId) ??
+                  "Unknown Category";
+                return `${categoryName} · ${budget.period} · ${budget.amount} $ `;
+              })()}
+            </DialogTitle>
             <DialogDescription>
               Share your budget with family members or roommates to collaborate
               on financial planning.
@@ -602,11 +538,10 @@ export default function BudgetsPage() {
                       }));
 
                       setEmailToShare("");
+                      toast.success("Budget successfully shared.");
                     } catch (err) {
                       console.error(err);
-                      alert(
-                        "Failed to share budget. Check console for details."
-                      );
+                      toast.error("Failed to share budget. Please try again.");
                     }
                   }}
                 >
@@ -662,10 +597,15 @@ export default function BudgetsPage() {
       <ManageCategoriesModal
         open={isManageCategoriesOpen}
         onClose={() => setIsManageCategoriesOpen(false)}
-        onSuccess={() => {
-          console.log("Category successfully created!");
+        onSuccess={(newCategory) => {
+          const cleanName = newCategory.name.split("---")[0];
+          const cleanedCategory = { ...newCategory, name: cleanName };
+
+          setCategories((prev) => [...prev, cleanedCategory]);
+          setCategoriesAllUsers((prev) => [...prev, cleanedCategory]);
         }}
       />
+
       <CreateBudgetModal
         open={isCreateBudgetOpen}
         onClose={() => setIsCreateBudgetOpen(false)}
@@ -696,7 +636,7 @@ export default function BudgetsPage() {
           );
         })()}
 
-      <ToastContainer
+      {/* <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -707,7 +647,7 @@ export default function BudgetsPage() {
         draggable
         pauseOnHover
         theme="light"
-      />
+      />*/}
     </div>
   );
 }

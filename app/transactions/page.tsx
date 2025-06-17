@@ -437,7 +437,7 @@ export default function TransactionsPage() {
         }}
         userId={user ? user.userId : null}
       />
-      <ToastContainer
+      {/*   <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -447,7 +447,7 @@ export default function TransactionsPage() {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-      />
+      />*/}
     </div>
   );
 }

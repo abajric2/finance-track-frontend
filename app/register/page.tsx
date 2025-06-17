@@ -15,6 +15,7 @@ import {
 import { registerUser } from "@/lib/userApi";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function RegisterPage() {
     country: "",
     currency: "USD",
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -86,18 +88,26 @@ export default function RegisterPage() {
                 disabled={loading}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password *</Label>
               <Input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
                 disabled={loading}
               />
+              <button
+                type="button"
+                className="absolute right-3 top-[38px] text-muted-foreground"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth">Date of Birth *</Label>
               <Input
@@ -142,10 +152,20 @@ export default function RegisterPage() {
             {loading ? "Registering..." : "Register"}
           </Button>
         </CardFooter>
+        <div className="text-sm text-center mt-2 mb-5 w-full">
+          Already have an account?{" "}
+          <button
+            onClick={() => router.push("/login")}
+            className="text-primary font-medium underline"
+            disabled={loading}
+          >
+            Sign in here
+          </button>
+        </div>
       </Card>
 
       {/* Toast container */}
-      <ToastContainer
+      {/*    <ToastContainer
         position="top-right"
         autoClose={2500}
         hideProgressBar={false}
@@ -154,7 +174,7 @@ export default function RegisterPage() {
         draggable
         pauseOnFocusLoss
         theme="light"
-      />
+      />*/}
     </div>
   );
 }

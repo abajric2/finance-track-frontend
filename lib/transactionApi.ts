@@ -1,5 +1,9 @@
 import { Category } from "@/types/category";
-import { Transaction } from "@/types/transaction";
+import {
+  ExtendedRecurringTransaction,
+  PeriodicTransaction,
+  Transaction,
+} from "@/types/transaction";
 import { fetchWithAuth } from "./fetchWithAuth";
 import { getAccountsByUserId } from "./userApi";
 
@@ -50,6 +54,45 @@ export async function createTransaction(transaction: Partial<Transaction>) {
   if (!res.ok) {
     throw new Error(`Failed to create transaction: ${res.statusText}`);
   }
-
   return res.json();
+}
+
+export async function getExtendedRecurringTransactions(
+  userId: number
+): Promise<ExtendedRecurringTransaction[]> {
+  const allTransactions = await getTransactions(userId);
+  const recurring = allTransactions.filter(
+    (tx) => tx.periodicTransactionId !== null
+  );
+
+  const extended = await Promise.all(
+    recurring.map(async (tx) => {
+      const res = await fetchWithAuth(
+        `${TRANSACTION_URL}/periodic/${tx.periodicTransactionId}`
+      );
+
+      if (!res.ok) {
+        console.warn(
+          `Failed to fetch periodic transaction ${tx.periodicTransactionId}`
+        );
+        return null;
+      }
+
+      const periodicData = await res.json();
+      console.log("periii ", periodicData);
+      return {
+        transaction: tx,
+        periodic: {
+          periodicTransactionId: periodicData.periodicTransactionId,
+          frequency: periodicData.frequency,
+          startDate: periodicData.startDate,
+          endDate: periodicData.endDate,
+        },
+      };
+    })
+  );
+  console.log("exxxxx", extended);
+  return extended.filter(
+    (item): item is ExtendedRecurringTransaction => item !== null
+  );
 }

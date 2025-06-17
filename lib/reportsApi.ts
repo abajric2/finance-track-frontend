@@ -41,7 +41,10 @@ export async function createGoal(goal: {
 export async function updateGoal(
   id: number,
   updates: Partial<
-    Pick<FinancialGoal, "name" | "targetAmount" | "deadline" | "status">
+    Pick<
+      FinancialGoal,
+      "name" | "targetAmount" | "deadline" | "status" | "currAmount"
+    >
   >
 ): Promise<FinancialGoal> {
   console.log(updates);
@@ -65,4 +68,20 @@ export async function deleteGoal(id: number): Promise<void> {
   });
 
   if (!res.ok) throw new Error("Failed to delete financial goal");
+}
+
+export async function createGoalTransaction(data: {
+  financialGoalId: number;
+  transactionUuid: string;
+  amount: number;
+}): Promise<void> {
+  const res = await fetchWithAuth(`${BASE_URL}/goal-transactions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) throw new Error("Failed to create goal transaction");
 }

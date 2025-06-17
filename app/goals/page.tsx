@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
+  ArrowRightCircle,
   Calendar,
   Check,
   ChevronDown,
@@ -61,6 +62,7 @@ import { getCurrentUser } from "@/lib/userApi";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
+import Link from "next/link";
 
 export default function GoalsPage() {
   const [showAddGoalDialog, setShowAddGoalDialog] = useState(false);
@@ -235,9 +237,6 @@ export default function GoalsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{activeGoalsCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                2 goals on track, 3 need attention
-              </p>
             </CardContent>
           </Card>
           <Card>
@@ -272,6 +271,27 @@ export default function GoalsPage() {
                     ).toLocaleDateString()}`
                   : "Set a deadline to track progress"}
               </p>
+            </CardContent>
+          </Card>
+          <Card className="md:col-span-3 border-dashed border-2">
+            <CardContent className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-3">
+                <ArrowRightCircle className="text-primary w-6 h-6" />
+                <div>
+                  <p className="font-medium text-foreground">
+                    Want to contribute to your active goals?
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Add funds through the transactions page.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/transactions"
+                className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium hover:bg-primary/90 transition"
+              >
+                Go to Transactions
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -421,7 +441,7 @@ export default function GoalsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ToastContainer
+      {/* <ToastContainer
         position="top-right"
         autoClose={2500}
         hideProgressBar={false}
@@ -430,7 +450,7 @@ export default function GoalsPage() {
         draggable
         pauseOnFocusLoss
         theme="light"
-      />
+      />*/}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
@@ -630,12 +650,12 @@ function FinancialGoalCard({
             </p>
             <p>{deadline}</p>
           </div>
-          {status === "ACTIVE" && (
+          {/*status === "ACTIVE" && (
             <Button size="sm" className="w-36 ml-auto">
               <ArrowRight className="h-4 w-4 mr-2" />
               Add Funds
             </Button>
-          )}
+          )*/}
           {/*<div>
             <p className="text-muted-foreground flex items-center">
               <Target className="h-4 w-4 mr-1" />

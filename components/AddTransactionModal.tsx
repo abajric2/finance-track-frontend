@@ -22,7 +22,16 @@ import { createTransaction, getCategories } from "@/lib/transactionApi";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
-import { getBudgetsByUserUuid, incrementCurrentAmount } from "@/lib/budgetApi";
+import {
+  getBudgetsByUserUuid,
+  getCategoryById,
+  incrementCurrentAmount,
+} from "@/lib/budgetApi";
+import {
+  createGoalTransaction,
+  getGoalsByUserUuid,
+  updateGoal,
+} from "@/lib/reportsApi";
 
 interface Props {
   open: boolean;
@@ -44,11 +53,19 @@ export default function AddTransactionModal({
     categoryId: "",
     accountUuid: "",
     budgetUuid: "",
+    goalId: "",
   });
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
+  const [goals, setGoals] = useState<any[]>([]);
+
+  const selectedCategory = categories.find(
+    (cat) => String(cat.categoryId) === formData.categoryId
+  );
+  const isSaveCategory = selectedCategory?.name === "Save";
+  const activeGoals = goals.filter((goal) => goal.status === "ACTIVE");
 
   useEffect(() => {
     if (open) {
@@ -64,10 +81,31 @@ export default function AddTransactionModal({
 
         try {
           const budgets = await getBudgetsByUserUuid(user.userUuid);
-          setBudgets(budgets);
+
+          const categoryMap: Record<number, string> = {};
+          for (const budget of budgets) {
+            if (budget.categoryId && !categoryMap[budget.categoryId]) {
+              try {
+                const category = await getCategoryById(budget.categoryId);
+                categoryMap[budget.categoryId] = category.name.split("---")[0];
+              } catch (err) {
+                console.error("Error fetching category:", err);
+              }
+            }
+          }
+
+          const enrichedBudgets = budgets.map((budget) => ({
+            ...budget,
+            categoryName: categoryMap[budget.categoryId] || "Unknown",
+          }));
+
+          setBudgets(enrichedBudgets);
+
+          const goals = await getGoalsByUserUuid(user.userUuid);
+          setGoals(goals);
         } catch (err) {
-          console.error("Failed to fetch budgets:", err);
-          toast.error("Could not load budgets.");
+          console.error("Failed to fetch budgets or goals:", err);
+          toast.error("Could not load budgets or goals.");
         }
       })();
     }
@@ -76,6 +114,7 @@ export default function AddTransactionModal({
   const handleSubmit = async () => {
     try {
       setLoading(true);
+
       const selectedBudget = budgets.find(
         (b: any) => b.budgetUuid === formData.budgetUuid
       );
@@ -87,9 +126,9 @@ export default function AddTransactionModal({
 
       const amount = parseFloat(formData.amount);
 
-      const transaction: Omit<Transaction, "transactionId"> = {
+      const transactionRequest: Omit<Transaction, "transactionId"> = {
         transactionUuid: uuidv4(),
-        accountUuid: formData.accountUuid as any,
+        accountUuid: formData.accountUuid,
         amount,
         date: formData.date,
         description: formData.description,
@@ -98,7 +137,7 @@ export default function AddTransactionModal({
         periodicTransactionId: null,
       };
 
-      await createTransaction(transaction);
+      const created = await createTransaction(transactionRequest);
 
       await incrementCurrentAmount(
         selectedBudget.budgetId,
@@ -106,8 +145,38 @@ export default function AddTransactionModal({
         selectedBudget.currentAmount
       );
 
-      toast.success("Transaction added successfully!");
+      // ⬇️ Ako je kategorija Save, poveži transakciju s ciljem + ažuriraj cilj
+      if (
+        isSaveCategory &&
+        formData.goalId &&
+        formData.goalId !== "__no-goals__"
+      ) {
+        try {
+          const goalId = parseInt(formData.goalId);
+          await createGoalTransaction({
+            financialGoalId: goalId,
+            transactionUuid: created.transactionUuid,
+            amount: amount,
+          });
 
+          const goal = goals.find((g) => g.financialGoalId === goalId);
+
+          if (goal) {
+            const updatedCurrAmount = goal.currAmount + amount;
+            const isCompleted = updatedCurrAmount >= goal.targetAmount;
+
+            await updateGoal(goalId, {
+              status: isCompleted ? "COMPLETED" : "ACTIVE",
+              currAmount: updatedCurrAmount,
+            });
+          }
+        } catch (goalErr) {
+          console.error("Goal update failed:", goalErr);
+          toast.error("Transaction added, but failed to update goal.");
+        }
+      }
+
+      toast.success("Transaction added successfully!");
       onSuccess();
       onClose();
     } catch (err) {
@@ -181,6 +250,43 @@ export default function AddTransactionModal({
             </Select>
           </div>
           <div>
+            <Label>Goal</Label>
+            <Select
+              value={formData.goalId}
+              onValueChange={(value) =>
+                setFormData({ ...formData, goalId: value })
+              }
+              disabled={!isSaveCategory}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    isSaveCategory
+                      ? "Select goal"
+                      : "Available only if category is 'Save'"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {activeGoals.length > 0 ? (
+                  activeGoals.map((goal) => (
+                    <SelectItem
+                      key={goal.financialGoalId}
+                      value={String(goal.financialGoalId)}
+                    >
+                      {goal.name} - {goal.targetAmount} BAM
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="__no-goals__" disabled>
+                    No active goals available
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
             <Label>Account</Label>
             <Select
               value={formData.accountUuid}
@@ -214,7 +320,8 @@ export default function AddTransactionModal({
               <SelectContent>
                 {budgets.map((budget) => (
                   <SelectItem key={budget.budgetUuid} value={budget.budgetUuid}>
-                    {budget.period} – {budget.amount} BAM
+                    {budget.categoryName} – {budget.period} – {budget.amount}{" "}
+                    BAM
                   </SelectItem>
                 ))}
               </SelectContent>
