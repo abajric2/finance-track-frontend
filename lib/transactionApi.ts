@@ -50,7 +50,6 @@ export async function createTransaction(transaction: Partial<Transaction>) {
   if (!res.ok) {
     throw new Error(`Failed to create transaction: ${res.statusText}`);
   }
-
   return res.json();
 }
 
