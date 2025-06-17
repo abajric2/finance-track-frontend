@@ -33,10 +33,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -64,7 +66,11 @@ import {
   Transaction,
 } from "@/types/transaction";
 import { getCurrentUser } from "@/lib/userApi";
-import { getExtendedRecurringTransactions } from "@/lib/transactionApi";
+import {
+  getCategories,
+  getExtendedRecurringTransactions,
+} from "@/lib/transactionApi";
+import { getNextRecurringDate } from "@/utils/getNextRecurringDate";
 
 export default function RecurringTransactionsPage() {
   const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false);
@@ -72,17 +78,61 @@ export default function RecurringTransactionsPage() {
   const [recurringTransactions, setRecurringTransactions] = useState<
     ExtendedRecurringTransaction[]
   >([]);
+  const [categories, setCategories] = useState<
+    Record<number, { name: string; type: string }>
+  >({});
+  const [frequencyFilter, setFrequencyFilter] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filterTransactions = (transactions: ExtendedRecurringTransaction[]) =>
+    transactions.filter((rec) => {
+      const matchesFrequency =
+        !frequencyFilter ||
+        rec.periodic.frequency?.toLowerCase() === frequencyFilter;
+
+      const matchesSearch =
+        rec.transaction?.description
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ?? false;
+
+      return matchesFrequency && matchesSearch;
+    });
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user?.userId) return;
 
-    getExtendedRecurringTransactions(user.userId)
-      .then(setRecurringTransactions)
+    Promise.all([
+      getExtendedRecurringTransactions(user.userId),
+      getCategories(),
+    ])
+      .then(([recTransactions, fetchedCategories]) => {
+        setRecurringTransactions(recTransactions);
+
+        const categoryMap: Record<number, { name: string; type: string }> = {};
+        fetchedCategories.forEach((c) => {
+          categoryMap[c.categoryId] = { name: c.name, type: c.type };
+        });
+        setCategories(categoryMap);
+      })
       .catch((err) =>
         console.error("Error fetching extended recurring transactions", err)
       );
   }, []);
+
+  const recurringIncome = recurringTransactions.filter(
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "income"
+  );
+
+  const recurringExpenses = recurringTransactions.filter(
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "expense"
+  );
+
+  const filteredAll = filterTransactions(recurringTransactions);
+  const filteredIncome = filterTransactions(recurringIncome);
+  const filteredExpenses = filterTransactions(recurringExpenses);
 
   return (
     <div className="container py-6">
@@ -97,13 +147,6 @@ export default function RecurringTransactionsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowProjectionDialog(true)}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              View Projections
-            </Button>
             <Button onClick={() => setShowAddRecurringDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Recurring
@@ -155,18 +198,22 @@ export default function RecurringTransactionsPage() {
         </div>
 
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 md:w-auto">
+          <TabsList className="grid w-full grid-cols-3 md:w-auto">
             <TabsTrigger value="all">All Recurring</TabsTrigger>
             <TabsTrigger value="income">Income</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
           </TabsList>
 
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-2">
               <div className="relative w-64">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search recurring..." className="pl-8" />
+                <Input
+                  placeholder="Search recurring..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -176,27 +223,30 @@ export default function RecurringTransactionsPage() {
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end" className="w-[200px]">
-                  <DropdownMenuCheckboxItem checked>
-                    All Frequencies
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem>Monthly</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem>Weekly</DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem>Yearly</DropdownMenuCheckboxItem>
+                  <DropdownMenuRadioGroup
+                    value={frequencyFilter || "all"}
+                    onValueChange={(value) =>
+                      setFrequencyFilter(value === "all" ? null : value)
+                    }
+                  >
+                    <DropdownMenuRadioItem value="all">
+                      All Frequencies
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="monthly">
+                      Monthly
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="weekly">
+                      Weekly
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="yearly">
+                      Yearly
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Select defaultValue="date">
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Next Date</SelectItem>
-                <SelectItem value="amount">Amount</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-                <SelectItem value="frequency">Frequency</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <TabsContent value="all" className="mt-4">
@@ -215,41 +265,39 @@ export default function RecurringTransactionsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Next Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recurringTransactions.map((rec) => {
+                    {filteredAll.map((rec) => {
                       const firstTransaction = rec.transaction;
                       const amount = firstTransaction?.amount || 0;
-                      const isIncome = amount > 0;
                       const category =
-                        firstTransaction?.categoryId ?? "Uncategorized";
-
+                        categories[firstTransaction?.categoryId]?.name;
+                      const isIncome =
+                        categories[
+                          firstTransaction?.categoryId
+                        ]?.type.toLocaleLowerCase() === "income";
                       return (
-                        <TableRow key={rec.periodic.periodicTransactionId}>
+                        <TableRow
+                          key={`${rec.periodic.periodicTransactionId}-${rec.transaction.transactionId}`}
+                        >
                           <TableCell className="font-medium">
                             {firstTransaction?.description || "N/A"}
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                isIncome
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }
-                            >
-                              {isIncome ? "Income" : category}
-                            </Badge>
-                          </TableCell>
+                          <TableCell>{category}</TableCell>
                           <TableCell>{rec.periodic.frequency}</TableCell>
                           <TableCell>
-                            {rec.periodic.startDate
-                              ? new Date(
-                                  rec.periodic.startDate
-                                ).toLocaleDateString()
+                            {rec.periodic.startDate && rec.periodic.frequency
+                              ? getNextRecurringDate(
+                                  rec.periodic.startDate,
+                                  rec.periodic.frequency
+                                )
                               : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {isIncome ? "Income" : "Expense"}
                           </TableCell>
                           <TableCell
                             className={cn(
@@ -257,27 +305,7 @@ export default function RecurringTransactionsPage() {
                               isIncome ? "text-green-600" : "text-destructive"
                             )}
                           >
-                            {isIncome ? "+" : "-"}${Math.abs(amount).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <Trash className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </div>
+                            ${Math.abs(amount).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       );
@@ -287,7 +315,6 @@ export default function RecurringTransactionsPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="income" className="mt-4">
             <Card>
               <CardHeader className="pb-2">
@@ -304,149 +331,50 @@ export default function RecurringTransactionsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Next Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Salary</TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Income
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (30th)</TableCell>
-                      <TableCell>June 30, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$4,500.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
+                    {filteredIncome.map((rec) => {
+                      const tx = rec.transaction;
+                      const amount = tx?.amount || 0;
+                      const category =
+                        categories[tx?.categoryId]?.name || "Uncategorized";
+                      const isIncome =
+                        categories[tx?.categoryId]?.type?.toLowerCase() ===
+                        "income";
+
+                      return (
+                        <TableRow
+                          key={`${rec.periodic.periodicTransactionId}-${tx.transactionId}`}
+                        >
+                          <TableCell className="font-medium">
+                            {tx?.description || "N/A"}
+                          </TableCell>
+                          <TableCell>{category}</TableCell>
+                          <TableCell>{rec.periodic.frequency}</TableCell>
+                          <TableCell>
+                            {rec.periodic.startDate && rec.periodic.frequency
+                              ? getNextRecurringDate(
+                                  rec.periodic.startDate,
+                                  rec.periodic.frequency
+                                )
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {isIncome ? "Income" : "Expense"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${
+                              isIncome ? "text-green-600" : "text-destructive"
+                            }`}
                           >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Freelance Income
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Income
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Weekly (Friday)</TableCell>
-                      <TableCell>June 23, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$250.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Dividend Payment
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Investment
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Quarterly</TableCell>
-                      <TableCell>July 15, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$320.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Rental Income
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Real Estate
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (1st)</TableCell>
-                      <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$800.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                            ${Math.abs(amount).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -469,384 +397,50 @@ export default function RecurringTransactionsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Frequency</TableHead>
                       <TableHead>Next Date</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Rent</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Housing
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (1st)</TableCell>
-                      <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$1,200.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Netflix</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Entertainment
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (15th)</TableCell>
-                      <TableCell>July 15, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$15.99
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Electricity Bill
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Utilities
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (20th)</TableCell>
-                      <TableCell>July 20, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$85.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Gym Membership
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Health & Fitness
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (5th)</TableCell>
-                      <TableCell>July 5, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$50.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Phone Bill</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Utilities
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (22nd)</TableCell>
-                      <TableCell>July 22, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$65.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Internet</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Utilities
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (18th)</TableCell>
-                      <TableCell>July 18, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$75.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Car Insurance
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Insurance
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (10th)</TableCell>
-                      <TableCell>July 10, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$120.00
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Spotify</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Entertainment
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (12th)</TableCell>
-                      <TableCell>July 12, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$9.99
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    {filteredExpenses.map((rec) => {
+                      const tx = rec.transaction;
+                      const amount = tx?.amount || 0;
+                      const category =
+                        categories[tx?.categoryId]?.name || "Uncategorized";
+                      const isIncome =
+                        categories[tx?.categoryId]?.type?.toLowerCase() ===
+                        "income";
 
-          <TabsContent value="upcoming" className="mt-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Upcoming Transactions</CardTitle>
-                <CardDescription>
-                  Transactions due in the next 7 days
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Frequency</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-medium">Salary</TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Income
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (30th)</TableCell>
-                      <TableCell>June 30, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$4,500.00
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          Skip
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Freelance Income
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Income
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Weekly (Friday)</TableCell>
-                      <TableCell>June 23, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$250.00
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          Skip
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Rent</TableCell>
-                      <TableCell>
-                        <Badge className="bg-red-100 text-red-800">
-                          Housing
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (1st)</TableCell>
-                      <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-destructive">
-                        -$1,200.00
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          Skip
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">
-                        Rental Income
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-800">
-                          Real Estate
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Monthly (1st)</TableCell>
-                      <TableCell>July 1, 2023</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        +$800.00
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">
-                          Skip
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                      return (
+                        <TableRow
+                          key={`${rec.periodic.periodicTransactionId}-${tx.transactionId}`}
+                        >
+                          <TableCell className="font-medium">
+                            {tx?.description || "N/A"}
+                          </TableCell>
+                          <TableCell>{category}</TableCell>
+                          <TableCell>{rec.periodic.frequency}</TableCell>
+                          <TableCell>
+                            {rec.periodic.startDate && rec.periodic.frequency
+                              ? getNextRecurringDate(
+                                  rec.periodic.startDate,
+                                  rec.periodic.frequency
+                                )
+                              : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {isIncome ? "Income" : "Expense"}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right ${
+                              isIncome ? "text-green-600" : "text-destructive"
+                            }`}
+                          >
+                            ${Math.abs(amount).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -967,13 +561,6 @@ export default function RecurringTransactionsPage() {
                   <SelectItem value="credit">Credit Card</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch id="auto-track" />
-              <Label htmlFor="auto-track">
-                Automatically track this transaction
-              </Label>
             </div>
           </div>
           <DialogFooter>
