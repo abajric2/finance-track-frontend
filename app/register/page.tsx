@@ -156,7 +156,7 @@ export default function RegisterPage() {
           Already have an account?{" "}
           <button
             onClick={() => router.push("/login")}
-            className="text-white font-medium underline"
+            className="text-primary font-medium underline"
             disabled={loading}
           >
             Sign in here

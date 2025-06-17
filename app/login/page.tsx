@@ -107,7 +107,7 @@ export default function LoginPage() {
           Don't have an account?{" "}
           <button
             onClick={() => router.push("/register")}
-            className="text-white font-medium underline"
+            className="text-primary font-medium underline"
             disabled={loading}
           >
             Register here
