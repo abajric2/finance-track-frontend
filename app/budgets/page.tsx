@@ -63,6 +63,7 @@ import {
   addUserToBudget,
   getAllCategories,
   getBudgetsByUserUuid,
+  getCategoriesAllUsers,
   getUsersByBudgetId,
   markBudgetAsShared,
 } from "@/lib/budgetApi";
@@ -97,6 +98,10 @@ export default function BudgetsPage() {
   const [filter, setFilter] = useState<"all" | "over" | "under">("all");
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
+  const [categoriesAllUsers, setCategoriesAllUsers] = useState<CategoryDTO[]>(
+    []
+  );
+
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
   const [isCreateBudgetOpen, setIsCreateBudgetOpen] = useState(false);
   const [sharedUsers, setSharedUsers] = useState<
@@ -108,6 +113,15 @@ export default function BudgetsPage() {
   );
   const [editBudgetId, setEditBudgetId] = useState<number | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const categoryMapAllUsers = useMemo(() => {
+    const map = new Map<number, string>();
+    console.log("cattttt allll", categoriesAllUsers);
+    categoriesAllUsers.forEach((cat) => {
+      map.set(cat.categoryId, cat.name);
+    });
+    return map;
+  }, [categoriesAllUsers]);
 
   const categoryMap = useMemo(() => {
     const map = new Map<number, string>();
@@ -136,10 +150,12 @@ export default function BudgetsPage() {
       Promise.all([
         getBudgetsByUserUuid(localUser.userUuid),
         getAllCategories(),
+        getCategoriesAllUsers(),
       ])
-        .then(async ([budgetsRes, categoriesRes]) => {
+        .then(async ([budgetsRes, categoriesRes, categoriesAllUsers]) => {
           setBudgets(budgetsRes);
           setCategories(categoriesRes);
+          setCategoriesAllUsers(categoriesAllUsers);
 
           const sharedBudgets = budgetsRes.filter((budget) => budget.shared);
 
@@ -288,7 +304,7 @@ export default function BudgetsPage() {
                           >
                             All Categories
                           </CommandItem>
-                          {Array.from(categoryMap.entries()).map(
+                          {Array.from(categoryMapAllUsers.entries()).map(
                             ([id, name]) => (
                               <CommandItem
                                 key={id}
@@ -330,9 +346,10 @@ export default function BudgetsPage() {
                 )
                 .map((budget) => {
                   const isOver = budget.currentAmount > budget.amount;
-                  console.log("eeee ", budget);
+                  console.log("eeeejjjj ", budget);
                   const categoryName =
-                    categoryMap.get(budget.categoryId) ?? "Unknown Category";
+                    categoryMapAllUsers.get(budget.categoryId) ??
+                    "Unknown Categoryaaa";
 
                   return (
                     <BudgetCategory
@@ -394,7 +411,7 @@ export default function BudgetsPage() {
                     <TabsContent value="by-you" className="mt-4 space-y-4">
                       {sharedByYou.map((budget) => {
                         const categoryName =
-                          categoryMap.get(budget.categoryId) ??
+                          categoryMapAllUsers.get(budget.categoryId) ??
                           "Unknown Category";
                         return (
                           <SharedBudgetCard
@@ -421,7 +438,7 @@ export default function BudgetsPage() {
                   <TabsContent value="with-you" className="mt-4 space-y-4">
                     {sharedWithYou.map((budget) => {
                       const categoryName =
-                        categoryMap.get(budget.categoryId) ??
+                        categoryMapAllUsers.get(budget.categoryId) ??
                         "Unknown Category";
                       return (
                         <SharedBudgetCard
@@ -569,10 +586,15 @@ export default function BudgetsPage() {
       <ManageCategoriesModal
         open={isManageCategoriesOpen}
         onClose={() => setIsManageCategoriesOpen(false)}
-        onSuccess={() => {
-          console.log("Category successfully created!");
+        onSuccess={(newCategory) => {
+          const cleanName = newCategory.name.split("---")[0];
+          const cleanedCategory = { ...newCategory, name: cleanName };
+
+          setCategories((prev) => [...prev, cleanedCategory]);
+          setCategoriesAllUsers((prev) => [...prev, cleanedCategory]);
         }}
       />
+
       <CreateBudgetModal
         open={isCreateBudgetOpen}
         onClose={() => setIsCreateBudgetOpen(false)}

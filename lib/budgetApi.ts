@@ -89,6 +89,20 @@ export async function getAllCategories(): Promise<CategoryDTO[]> {
     }));
 }
 
+export async function getCategoriesAllUsers(): Promise<CategoryDTO[]> {
+  const res = await fetchWithAuth(`${BASE_URL}/api/budgets/categories`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch categories: ${res.statusText}`);
+  }
+
+  const allCategories: CategoryDTO[] = await res.json();
+
+  return allCategories.map((cat) => ({
+    ...cat,
+    name: cat.name.split("---")[0],
+  }));
+}
+
 export async function createBudget(data: {
   owner: string;
   amount: number;

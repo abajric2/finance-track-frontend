@@ -26,7 +26,7 @@ import { Category } from "@/types/category";
 interface ManageCategoriesModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newCategory: CategoryDTO) => void;
 }
 
 function ManageCategoriesModal({
@@ -52,9 +52,10 @@ function ManageCategoriesModal({
   async function handleCreateCategory() {
     setLoading(true);
     try {
-      await createCategory(formData);
+      const createdCategory = await createCategory(formData);
       toast.success("Category created!");
-      onSuccess();
+      onSuccess(createdCategory);
+
       onClose();
     } catch {
       toast.error("Failed to create category");
