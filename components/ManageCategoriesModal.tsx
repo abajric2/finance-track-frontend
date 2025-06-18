@@ -39,6 +39,7 @@ function ManageCategoriesModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setFormData({ name: "", type: "" });
     if (open) {
       fetchCategories();
     }

@@ -41,6 +41,13 @@ export default function CreateBudgetModal({ open, onClose, onSuccess }: Props) {
   const [categories, setCategories] = useState<CategoryDTO[]>([]);
 
   useEffect(() => {
+    setFormData({
+      amount: "",
+      period: "",
+      categoryId: "",
+      startDate: new Date().toISOString().slice(0, 10),
+      endDate: "",
+    });
     if (open) {
       getAllCategories().then(setCategories);
     }

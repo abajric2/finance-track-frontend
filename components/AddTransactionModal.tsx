@@ -68,6 +68,15 @@ export default function AddTransactionModal({
   const activeGoals = goals.filter((goal) => goal.status === "ACTIVE");
 
   useEffect(() => {
+    setFormData({
+      amount: "",
+      description: "",
+      date: new Date().toISOString().slice(0, 10),
+      categoryId: "",
+      accountUuid: "",
+      budgetUuid: "",
+      goalId: "",
+    });
     if (open) {
       getCategories().then(setCategories);
       getAccountsByUserId(userId).then(setAccounts);
@@ -274,7 +283,7 @@ export default function AddTransactionModal({
                       key={goal.financialGoalId}
                       value={String(goal.financialGoalId)}
                     >
-                      {goal.name} - {goal.targetAmount} BAM
+                      {goal.name} - {goal.targetAmount} $
                     </SelectItem>
                   ))
                 ) : (
@@ -320,8 +329,7 @@ export default function AddTransactionModal({
               <SelectContent>
                 {budgets.map((budget) => (
                   <SelectItem key={budget.budgetUuid} value={budget.budgetUuid}>
-                    {budget.categoryName} – {budget.period} – {budget.amount}{" "}
-                    BAM
+                    {budget.categoryName} – {budget.period} – {budget.amount} $
                   </SelectItem>
                 ))}
               </SelectContent>

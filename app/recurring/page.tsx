@@ -120,6 +120,16 @@ export default function RecurringTransactionsPage() {
     });
 
   useEffect(() => {
+    setFormData({
+      name: "",
+      amount: "",
+      categoryId: "",
+      budgetId: "",
+      frequency: "",
+      startDate: "",
+      endDate: "",
+      accountId: "",
+    });
     const fetchData = async () => {
       const user = getCurrentUser();
       if (!user) {

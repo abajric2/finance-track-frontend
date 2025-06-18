@@ -38,7 +38,7 @@ const accountTypes: AccountType[] = [
 export default function AddAccountModal({ open, onClose, onSuccess }: Props) {
   const [formData, setFormData] = useState({
     name: "",
-    type: "SAVINGS",
+    type: "",
     balance: "",
     currencyCode: "",
   });
@@ -46,6 +46,12 @@ export default function AddAccountModal({ open, onClose, onSuccess }: Props) {
   const [currencies, setCurrencies] = useState<CurrencyEntity[]>([]);
 
   useEffect(() => {
+    setFormData({
+      name: "",
+      type: "",
+      balance: "",
+      currencyCode: "",
+    });
     if (open && currencies.length === 0) {
       getCurrencies()
         .then(setCurrencies)
