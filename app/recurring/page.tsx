@@ -67,12 +67,15 @@ import {
 } from "@/types/transaction";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import {
+  createPeriodicTransaction,
+  createTransaction,
   getCategories,
   getExtendedRecurringTransactions,
 } from "@/lib/transactionApi";
 import { getNextRecurringDate } from "@/utils/getNextRecurringDate";
 import { toast } from "react-toastify";
 import { getBudgetsByUserUuid, getCategoryById } from "@/lib/budgetApi";
+import { v4 as uuidv4 } from "uuid";
 
 export default function RecurringTransactionsPage() {
   const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false);
@@ -87,6 +90,20 @@ export default function RecurringTransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [accounts, setAccounts] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    amount: "",
+    categoryId: "",
+    budgetId: "",
+    frequency: "",
+    startDate: "",
+    endDate: "",
+    accountId: "",
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const filterTransactions = (transactions: ExtendedRecurringTransaction[]) =>
     transactions.filter((rec) => {
@@ -151,6 +168,59 @@ export default function RecurringTransactionsPage() {
 
     fetchData();
   }, []);
+
+  const handleAddRecurringTransaction = async () => {
+    const user = getCurrentUser();
+    if (!user) {
+      toast.error("User not found.");
+      return;
+    }
+
+    try {
+      const periodic = await createPeriodicTransaction({
+        frequency: formData.frequency,
+        startDate: formData.startDate,
+        endDate: formData.endDate || undefined,
+      });
+      const today = new Date().toISOString().split("T")[0];
+
+      const transactionPayload = {
+        transactionUuid: uuidv4(),
+        amount: Number(formData.amount),
+        date: today,
+        description: formData.name,
+        accountUuid: accounts.find(
+          (acc) => acc.accountId === Number(formData.accountId)
+        )?.accountUuid,
+        categoryId: Number(formData.categoryId),
+        budgetUuid: budgets.find(
+          (b) => b.budgetId === Number(formData.budgetId)
+        )?.budgetUuid,
+        periodicTransactionId: periodic.periodicTransactionId,
+      };
+
+      await createTransaction(transactionPayload);
+
+      const updated = await getExtendedRecurringTransactions(user.userId);
+      setRecurringTransactions(updated);
+
+      toast.success("Recurring transaction added successfully!");
+      setShowAddRecurringDialog(false);
+      setFormData({
+        name: "",
+        amount: "",
+        categoryId: "",
+        budgetId: "",
+        frequency: "",
+        startDate: "",
+        endDate: "",
+        accountId: "",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to add recurring transaction.");
+    }
+  };
 
   const recurringIncome = recurringTransactions.filter(
     (rec) =>
@@ -499,6 +569,8 @@ export default function RecurringTransactionsPage() {
               <Label htmlFor="transaction-name">Transaction Name</Label>
               <Input
                 id="transaction-name"
+                value={formData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
                 placeholder="e.g. Rent, Salary, Netflix, etc."
               />
             </div>
@@ -510,13 +582,22 @@ export default function RecurringTransactionsPage() {
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
                     $
                   </span>
-                  <Input id="amount" placeholder="0.00" className="pl-7" />
+                  <Input
+                    id="amount"
+                    value={formData.amount}
+                    onChange={(e) => handleChange("amount", e.target.value)}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
-                <Select>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(val) => handleChange("categoryId", val)}
+                >
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -535,7 +616,10 @@ export default function RecurringTransactionsPage() {
 
             <div className="grid gap-2">
               <Label htmlFor="budget">Budget</Label>
-              <Select>
+              <Select
+                value={formData.budgetId}
+                onValueChange={(val) => handleChange("budgetId", val)}
+              >
                 <SelectTrigger id="budget">
                   <SelectValue placeholder="Select budget" />
                 </SelectTrigger>
@@ -555,7 +639,10 @@ export default function RecurringTransactionsPage() {
 
             <div className="grid gap-2">
               <Label htmlFor="frequency">Frequency</Label>
-              <Select>
+              <Select
+                value={formData.frequency}
+                onValueChange={(val) => handleChange("frequency", val)}
+              >
                 <SelectTrigger id="frequency">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
@@ -570,17 +657,30 @@ export default function RecurringTransactionsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="start-date">Start Date</Label>
-                <Input id="start-date" type="date" />
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => handleChange("startDate", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="end-date">End Date (Optional)</Label>
-                <Input id="end-date" type="date" />
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => handleChange("endDate", e.target.value)}
+                />
               </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="account">Account</Label>
-              <Select>
+              <Select
+                value={formData.accountId}
+                onValueChange={(val) => handleChange("accountId", val)}
+              >
                 <SelectTrigger id="account">
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
@@ -597,6 +697,7 @@ export default function RecurringTransactionsPage() {
               </Select>
             </div>
           </div>
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -604,7 +705,7 @@ export default function RecurringTransactionsPage() {
             >
               Cancel
             </Button>
-            <Button onClick={() => setShowAddRecurringDialog(false)}>
+            <Button onClick={handleAddRecurringTransaction}>
               Add Recurring Transaction
             </Button>
           </DialogFooter>

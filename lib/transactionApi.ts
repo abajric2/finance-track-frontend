@@ -100,12 +100,17 @@ export async function getExtendedRecurringTransactions(
 export async function createPeriodicTransaction(
   periodicTransaction: Partial<PeriodicTransaction>
 ): Promise<PeriodicTransaction> {
+  const payload = {
+    ...periodicTransaction,
+    transactions: periodicTransaction.transactions ?? [],
+  };
+
   const res = await fetchWithAuth(`${TRANSACTION_URL}/periodic`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(periodicTransaction),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
