@@ -44,6 +44,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { Label } from "@/components/ui/label";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import { UserResponse } from "@/types/user";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function TransactionsPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -115,6 +117,41 @@ export default function TransactionsPage() {
     t.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text("All Transactions", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+
+    const headers = [
+      ["Date", "Description", "Category", "Account", "Type", "Amount"],
+    ];
+
+    const data = filteredTransactions.map((t) => [
+      new Date(t.date).toLocaleDateString(),
+      t.description,
+      categories[t.categoryId]?.name || "Unknown",
+      accounts[t.accountUuid] || "Unknown",
+      categories[t.categoryId]?.type || "Unknown",
+      `$${Math.abs(t.amount).toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      head: headers,
+      body: data,
+      startY: 30,
+      styles: {
+        fontSize: 10,
+      },
+      headStyles: {
+        fillColor: [22, 163, 74],
+      },
+    });
+
+    doc.save("transactions.pdf");
+  };
   return (
     <div className="container py-6">
       <div className="grid gap-6">
@@ -224,7 +261,12 @@ export default function TransactionsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="outline" size="sm" className="h-10">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-10"
+            onClick={exportToPDF}
+          >
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -443,17 +485,6 @@ export default function TransactionsPage() {
         }}
         userId={user ? user.userId : null}
       />
-      {/*   <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />*/}
     </div>
   );
 }
