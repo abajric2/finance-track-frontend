@@ -65,12 +65,14 @@ import {
   PeriodicTransaction,
   Transaction,
 } from "@/types/transaction";
-import { getCurrentUser } from "@/lib/userApi";
+import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import {
   getCategories,
   getExtendedRecurringTransactions,
 } from "@/lib/transactionApi";
 import { getNextRecurringDate } from "@/utils/getNextRecurringDate";
+import { toast } from "react-toastify";
+import { getBudgetsByUserUuid, getCategoryById } from "@/lib/budgetApi";
 
 export default function RecurringTransactionsPage() {
   const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false);
@@ -83,6 +85,8 @@ export default function RecurringTransactionsPage() {
   >({});
   const [frequencyFilter, setFrequencyFilter] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
 
   const filterTransactions = (transactions: ExtendedRecurringTransaction[]) =>
     transactions.filter((rec) => {
@@ -99,25 +103,53 @@ export default function RecurringTransactionsPage() {
     });
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user?.userId) return;
+    const fetchData = async () => {
+      const user = getCurrentUser();
+      if (!user) {
+        toast.error("User not found. Please log in again.");
+        return;
+      }
 
-    Promise.all([
-      getExtendedRecurringTransactions(user.userId),
-      getCategories(),
-    ])
-      .then(([recTransactions, fetchedCategories]) => {
+      try {
+        const [recTransactions, fetchedCategories, fetchedAccounts] =
+          await Promise.all([
+            getExtendedRecurringTransactions(user.userId),
+            getCategories(),
+            getAccountsByUserId(user.userId),
+          ]);
+
         setRecurringTransactions(recTransactions);
+        setCategories(fetchedCategories);
+        setAccounts(fetchedAccounts);
 
-        const categoryMap: Record<number, { name: string; type: string }> = {};
-        fetchedCategories.forEach((c) => {
-          categoryMap[c.categoryId] = { name: c.name, type: c.type };
-        });
-        setCategories(categoryMap);
-      })
-      .catch((err) =>
-        console.error("Error fetching extended recurring transactions", err)
-      );
+        const budgets = await getBudgetsByUserUuid(user.userUuid);
+
+        const categoryMapForBudgets: Record<number, string> = {};
+        for (const budget of budgets) {
+          if (budget.categoryId && !categoryMapForBudgets[budget.categoryId]) {
+            try {
+              const category = await getCategoryById(budget.categoryId);
+              categoryMapForBudgets[budget.categoryId] =
+                category.name.split("---")[0];
+            } catch (err) {
+              console.error("Error fetching category for budget:", err);
+            }
+          }
+        }
+
+        const enrichedBudgets = budgets.map((budget) => ({
+          ...budget,
+          categoryName: categoryMapForBudgets[budget.categoryId] || "Unknown",
+        }));
+
+        setBudgets(enrichedBudgets);
+      } catch (err) {
+        console.error("Failed to load recurring data:", err);
+        toast.error("Could not load recurring transactions or metadata.");
+      }
+    };
+
+    fetchData();
   }, []);
 
   const recurringIncome = recurringTransactions.filter(
@@ -471,26 +503,6 @@ export default function RecurringTransactionsPage() {
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label>Transaction Type</Label>
-              <RadioGroup defaultValue="expense" className="flex gap-4">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="expense" id="expense" />
-                  <Label htmlFor="expense" className="flex items-center">
-                    <ArrowUp className="mr-2 h-4 w-4 text-destructive" />
-                    Expense
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="income" id="income" />
-                  <Label htmlFor="income" className="flex items-center">
-                    <ArrowDown className="mr-2 h-4 w-4 text-green-600" />
-                    Income
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="amount">Amount</Label>
@@ -501,6 +513,7 @@ export default function RecurringTransactionsPage() {
                   <Input id="amount" placeholder="0.00" className="pl-7" />
                 </div>
               </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
                 <Select>
@@ -508,17 +521,36 @@ export default function RecurringTransactionsPage() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="housing">Housing</SelectItem>
-                    <SelectItem value="utilities">Utilities</SelectItem>
-                    <SelectItem value="entertainment">Entertainment</SelectItem>
-                    <SelectItem value="health">Health & Fitness</SelectItem>
-                    <SelectItem value="insurance">Insurance</SelectItem>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="investment">Investment</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {Object.entries(categories)
+                      .filter(([, cat]) => cat.name.toLowerCase() !== "save")
+                      .map(([id, cat]) => (
+                        <SelectItem key={id} value={id}>
+                          {cat.name} ({cat.type.toLowerCase()})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="budget">Budget</Label>
+              <Select>
+                <SelectTrigger id="budget">
+                  <SelectValue placeholder="Select budget" />
+                </SelectTrigger>
+                <SelectContent>
+                  {budgets.map((budget) => (
+                    <SelectItem
+                      key={budget.budgetId}
+                      value={String(budget.budgetId)}
+                    >
+                      {budget.categoryName || "Unnamed"} - {budget.period} - $
+                      {budget.amount}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
@@ -528,11 +560,8 @@ export default function RecurringTransactionsPage() {
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
                   <SelectItem value="yearly">Yearly</SelectItem>
                 </SelectContent>
               </Select>
@@ -556,9 +585,14 @@ export default function RecurringTransactionsPage() {
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="checking">Checking Account</SelectItem>
-                  <SelectItem value="savings">Savings Account</SelectItem>
-                  <SelectItem value="credit">Credit Card</SelectItem>
+                  {accounts.map((acc) => (
+                    <SelectItem
+                      key={acc.accountId}
+                      value={String(acc.accountId)}
+                    >
+                      {acc.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -572,178 +606,6 @@ export default function RecurringTransactionsPage() {
             </Button>
             <Button onClick={() => setShowAddRecurringDialog(false)}>
               Add Recurring Transaction
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Projection Dialog */}
-      <Dialog
-        open={showProjectionDialog}
-        onOpenChange={setShowProjectionDialog}
-      >
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>Cash Flow Projections</DialogTitle>
-            <DialogDescription>
-              View your projected account balances based on recurring
-              transactions.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">Projection Period</h3>
-                <p className="text-xs text-muted-foreground">
-                  June 20 - July 20, 2023
-                </p>
-              </div>
-              <Select defaultValue="30">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Next 7 days</SelectItem>
-                  <SelectItem value="30">Next 30 days</SelectItem>
-                  <SelectItem value="90">Next 90 days</SelectItem>
-                  <SelectItem value="180">Next 6 months</SelectItem>
-                  <SelectItem value="365">Next 12 months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="rounded-md border">
-              <div className="flex items-center justify-between bg-muted p-4">
-                <div className="grid gap-1">
-                  <h3 className="text-sm font-medium">Checking Account</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Bank of America
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">
-                    Current Balance: $5,240.12
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Projected on July 20: $7,125.13
-                  </p>
-                </div>
-              </div>
-              <div className="p-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">June 23, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Freelance Income</p>
-                        <Badge className="bg-green-100 text-green-800">
-                          +$250.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$5,490.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">June 30, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Salary</p>
-                        <Badge className="bg-green-100 text-green-800">
-                          +$4,500.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$9,990.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">July 1, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Rent</p>
-                        <Badge className="bg-red-100 text-red-800">
-                          -$1,200.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$8,790.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">July 1, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Rental Income</p>
-                        <Badge className="bg-green-100 text-green-800">
-                          +$800.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$9,590.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">July 5, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Gym Membership</p>
-                        <Badge className="bg-red-100 text-red-800">
-                          -$50.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$9,540.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      ... and 8 more transactions
-                    </p>
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Refresh Projection
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">Projected Net Cash Flow</h3>
-                <p className="text-xs text-muted-foreground">
-                  For the selected period
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-green-600">+$1,885.01</p>
-                <p className="text-xs text-muted-foreground">
-                  $5,870.00 income, $3,984.99 expenses
-                </p>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowProjectionDialog(false)}
-            >
-              Close
-            </Button>
-            <Button>
-              <CreditCard className="mr-2 h-4 w-4" />
-              View All Accounts
             </Button>
           </DialogFooter>
         </DialogContent>

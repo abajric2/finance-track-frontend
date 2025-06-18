@@ -800,30 +800,3 @@ function BudgetCategory({
     </Card>
   );
 }
-
-interface BudgetPlanningItemProps {
-  name: string;
-  amount: number;
-}
-
-function BudgetPlanningItem({ name, amount }: BudgetPlanningItemProps) {
-  return (
-    <div className="flex items-center gap-4">
-      <div className="flex-1 font-medium">{name}</div>
-      <div className="relative w-[150px]">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-          $
-        </span>
-        <Input
-          placeholder="0.00"
-          className="pl-7"
-          defaultValue={amount.toFixed(2)}
-        />
-      </div>
-      <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Settings className="h-4 w-4" />
-        <span className="sr-only">Edit</span>
-      </Button>
-    </div>
-  );
-}
