@@ -236,6 +236,54 @@ export default function RecurringTransactionsPage() {
   const filteredIncome = filterTransactions(recurringIncome);
   const filteredExpenses = filterTransactions(recurringExpenses);
 
+  const totalRecurring = recurringTransactions.length;
+
+  const totalIncomeTransactions = recurringTransactions.filter(
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "income"
+  );
+
+  const totalExpenseTransactions = recurringTransactions.filter(
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "expense"
+  );
+
+  const totalIncomeAmount = totalIncomeTransactions.reduce(
+    (sum, rec) => sum + (rec.transaction?.amount || 0),
+    0
+  );
+
+  const totalExpenseAmount = totalExpenseTransactions.reduce(
+    (sum, rec) => sum + (rec.transaction?.amount || 0),
+    0
+  );
+
+  const nextIncome = [...totalIncomeTransactions]
+    .map((rec) => ({
+      ...rec,
+      nextDateString: getNextRecurringDate(
+        rec.periodic.startDate,
+        rec.periodic.frequency
+      ),
+      nextDate: new Date(
+        getNextRecurringDate(rec.periodic.startDate, rec.periodic.frequency)
+      ),
+    }))
+    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())[0];
+
+  const nextExpense = [...totalExpenseTransactions]
+    .map((rec) => ({
+      ...rec,
+      nextDateString: getNextRecurringDate(
+        rec.periodic.startDate,
+        rec.periodic.frequency
+      ),
+      nextDate: new Date(
+        getNextRecurringDate(rec.periodic.startDate, rec.periodic.frequency)
+      ),
+    }))
+    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())[0];
+
   return (
     <div className="container py-6">
       <div className="grid gap-6">
@@ -259,41 +307,48 @@ export default function RecurringTransactionsPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Monthly Recurring</CardTitle>
-              <CardDescription>Total recurring transactions</CardDescription>
+              <CardTitle>Total Recurring</CardTitle>
+              <CardDescription>All recurring transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{totalRecurring}</div>
               <p className="text-xs text-muted-foreground mt-2">
-                8 expenses, 4 income
+                {totalExpenseTransactions.length} expenses,{" "}
+                {totalIncomeTransactions.length} income
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Monthly Outflow</CardTitle>
-              <CardDescription>Recurring expenses</CardDescription>
+              <CardTitle>Total Outflow</CardTitle>
+              <CardDescription>All recurring expenses</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                -$2,345.00
+                -${totalExpenseAmount.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Next: Rent ($1,200) on July 1
+                {nextExpense
+                  ? `Next: ${nextExpense.transaction?.description} ($${nextExpense.transaction?.amount}) on ${nextExpense.nextDateString}`
+                  : "No upcoming expense"}
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Monthly Inflow</CardTitle>
-              <CardDescription>Recurring income</CardDescription>
+              <CardTitle>Total Inflow</CardTitle>
+              <CardDescription>All recurring income</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                +$5,800.00
+                +${totalIncomeAmount.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Next: Salary ($4,500) on June 30
+                {nextIncome
+                  ? `Next: ${nextIncome.transaction?.description} ($${nextIncome.transaction?.amount}) on ${nextIncome.nextDateString}`
+                  : "No upcoming income"}
               </p>
             </CardContent>
           </Card>
