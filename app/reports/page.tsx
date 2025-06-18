@@ -153,7 +153,7 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-xl font-semibold text-green-600">
-                {totalIncome.toFixed(2)} BAM
+                {totalIncome.toFixed(2)} $
               </p>
             </CardContent>
           </Card>
@@ -164,7 +164,7 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-xl font-semibold text-red-600">
-                {totalExpenses.toFixed(2)} BAM
+                {totalExpenses.toFixed(2)} $
               </p>
             </CardContent>
           </Card>
@@ -175,7 +175,7 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-xl font-semibold">
-                {totalSavings.toFixed(2)} BAM
+                {totalSavings.toFixed(2)} $
               </p>
             </CardContent>
           </Card>
