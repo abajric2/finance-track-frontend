@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,15 @@ import "react-toastify/dist/ReactToastify.css";
 import { Label } from "@/components/ui/label";
 import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import { UserResponse } from "@/types/user";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FileText, FileSpreadsheet, FileDown } from "lucide-react";
 
 export default function TransactionsPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -114,6 +124,88 @@ export default function TransactionsPage() {
   const filteredTransactions = visibleTransactions.filter((t) =>
     t.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text("All Transactions", 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+
+    const headers = [
+      ["Date", "Description", "Category", "Account", "Type", "Amount"],
+    ];
+
+    const data = filteredTransactions.map((t) => [
+      new Date(t.date).toLocaleDateString(),
+      t.description,
+      categories[t.categoryId]?.name || "Unknown",
+      accounts[t.accountUuid] || "Unknown",
+      categories[t.categoryId]?.type || "Unknown",
+      `$${Math.abs(t.amount).toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      head: headers,
+      body: data,
+      startY: 30,
+      styles: {
+        fontSize: 10,
+      },
+      headStyles: {
+        fillColor: [22, 163, 74],
+      },
+    });
+
+    doc.save("transactions.pdf");
+  };
+
+  const exportToCSV = () => {
+    const headers = [
+      "Date",
+      "Description",
+      "Category",
+      "Account",
+      "Type",
+      "Amount",
+    ];
+    const rows = filteredTransactions.map((t) => [
+      new Date(t.date).toLocaleDateString(),
+      t.description,
+      categories[t.categoryId]?.name || "Unknown",
+      accounts[t.accountUuid] || "Unknown",
+      categories[t.categoryId]?.type || "Unknown",
+      `$${Math.abs(t.amount).toFixed(2)}`,
+    ]);
+
+    const csvContent = [headers, ...rows].map((e) => e.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "transactions.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(
+      filteredTransactions.map((t) => ({
+        Date: new Date(t.date).toLocaleDateString(),
+        Description: t.description,
+        Category: categories[t.categoryId]?.name || "Unknown",
+        Account: accounts[t.accountUuid] || "Unknown",
+        Type: categories[t.categoryId]?.type || "Unknown",
+        Amount: `$${Math.abs(t.amount).toFixed(2)}`,
+      }))
+    );
+
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    XLSX.writeFile(wb, "transactions.xlsx");
+  };
 
   return (
     <div className="container py-6">
@@ -224,10 +316,29 @@ export default function TransactionsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="outline" size="sm" className="h-10">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-10">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+                <ChevronDown className="ml-1 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportToPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToCSV}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToExcel}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -443,17 +554,6 @@ export default function TransactionsPage() {
         }}
         userId={user ? user.userId : null}
       />
-      {/*   <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />*/}
     </div>
   );
 }

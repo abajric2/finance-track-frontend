@@ -96,3 +96,27 @@ export async function getExtendedRecurringTransactions(
     (item): item is ExtendedRecurringTransaction => item !== null
   );
 }
+
+export async function createPeriodicTransaction(
+  periodicTransaction: Partial<PeriodicTransaction>
+): Promise<PeriodicTransaction> {
+  const payload = {
+    ...periodicTransaction,
+    transactions: periodicTransaction.transactions ?? [],
+  };
+
+  const res = await fetchWithAuth(`${TRANSACTION_URL}/periodic`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to create periodic transaction: ${errorText}`);
+  }
+
+  return res.json();
+}

@@ -65,12 +65,17 @@ import {
   PeriodicTransaction,
   Transaction,
 } from "@/types/transaction";
-import { getCurrentUser } from "@/lib/userApi";
+import { getAccountsByUserId, getCurrentUser } from "@/lib/userApi";
 import {
+  createPeriodicTransaction,
+  createTransaction,
   getCategories,
   getExtendedRecurringTransactions,
 } from "@/lib/transactionApi";
 import { getNextRecurringDate } from "@/utils/getNextRecurringDate";
+import { toast } from "react-toastify";
+import { getBudgetsByUserUuid, getCategoryById } from "@/lib/budgetApi";
+import { v4 as uuidv4 } from "uuid";
 
 export default function RecurringTransactionsPage() {
   const [showAddRecurringDialog, setShowAddRecurringDialog] = useState(false);
@@ -83,6 +88,22 @@ export default function RecurringTransactionsPage() {
   >({});
   const [frequencyFilter, setFrequencyFilter] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    amount: "",
+    categoryId: "",
+    budgetId: "",
+    frequency: "",
+    startDate: "",
+    endDate: "",
+    accountId: "",
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const filterTransactions = (transactions: ExtendedRecurringTransaction[]) =>
     transactions.filter((rec) => {
@@ -99,26 +120,107 @@ export default function RecurringTransactionsPage() {
     });
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user?.userId) return;
+    const fetchData = async () => {
+      const user = getCurrentUser();
+      if (!user) {
+        toast.error("User not found. Please log in again.");
+        return;
+      }
 
-    Promise.all([
-      getExtendedRecurringTransactions(user.userId),
-      getCategories(),
-    ])
-      .then(([recTransactions, fetchedCategories]) => {
+      try {
+        const [recTransactions, fetchedCategories, fetchedAccounts] =
+          await Promise.all([
+            getExtendedRecurringTransactions(user.userId),
+            getCategories(),
+            getAccountsByUserId(user.userId),
+          ]);
+
         setRecurringTransactions(recTransactions);
+        setCategories(fetchedCategories);
+        setAccounts(fetchedAccounts);
 
-        const categoryMap: Record<number, { name: string; type: string }> = {};
-        fetchedCategories.forEach((c) => {
-          categoryMap[c.categoryId] = { name: c.name, type: c.type };
-        });
-        setCategories(categoryMap);
-      })
-      .catch((err) =>
-        console.error("Error fetching extended recurring transactions", err)
-      );
+        const budgets = await getBudgetsByUserUuid(user.userUuid);
+
+        const categoryMapForBudgets: Record<number, string> = {};
+        for (const budget of budgets) {
+          if (budget.categoryId && !categoryMapForBudgets[budget.categoryId]) {
+            try {
+              const category = await getCategoryById(budget.categoryId);
+              categoryMapForBudgets[budget.categoryId] =
+                category.name.split("---")[0];
+            } catch (err) {
+              console.error("Error fetching category for budget:", err);
+            }
+          }
+        }
+
+        const enrichedBudgets = budgets.map((budget) => ({
+          ...budget,
+          categoryName: categoryMapForBudgets[budget.categoryId] || "Unknown",
+        }));
+
+        setBudgets(enrichedBudgets);
+      } catch (err) {
+        console.error("Failed to load recurring data:", err);
+        toast.error("Could not load recurring transactions or metadata.");
+      }
+    };
+
+    fetchData();
   }, []);
+
+  const handleAddRecurringTransaction = async () => {
+    const user = getCurrentUser();
+    if (!user) {
+      toast.error("User not found.");
+      return;
+    }
+
+    try {
+      const periodic = await createPeriodicTransaction({
+        frequency: formData.frequency,
+        startDate: formData.startDate,
+        endDate: formData.endDate || undefined,
+      });
+      const today = new Date().toISOString().split("T")[0];
+
+      const transactionPayload = {
+        transactionUuid: uuidv4(),
+        amount: Number(formData.amount),
+        date: today,
+        description: formData.name,
+        accountUuid: accounts.find(
+          (acc) => acc.accountId === Number(formData.accountId)
+        )?.accountUuid,
+        categoryId: Number(formData.categoryId),
+        budgetUuid: budgets.find(
+          (b) => b.budgetId === Number(formData.budgetId)
+        )?.budgetUuid,
+        periodicTransactionId: periodic.periodicTransactionId,
+      };
+
+      await createTransaction(transactionPayload);
+
+      const updated = await getExtendedRecurringTransactions(user.userId);
+      setRecurringTransactions(updated);
+
+      toast.success("Recurring transaction added successfully!");
+      setShowAddRecurringDialog(false);
+      setFormData({
+        name: "",
+        amount: "",
+        categoryId: "",
+        budgetId: "",
+        frequency: "",
+        startDate: "",
+        endDate: "",
+        accountId: "",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to add recurring transaction.");
+    }
+  };
 
   const recurringIncome = recurringTransactions.filter(
     (rec) =>
@@ -133,6 +235,54 @@ export default function RecurringTransactionsPage() {
   const filteredAll = filterTransactions(recurringTransactions);
   const filteredIncome = filterTransactions(recurringIncome);
   const filteredExpenses = filterTransactions(recurringExpenses);
+
+  const totalRecurring = recurringTransactions.length;
+
+  const totalIncomeTransactions = recurringTransactions.filter(
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "income"
+  );
+
+  const totalExpenseTransactions = recurringTransactions.filter(
+    (rec) =>
+      categories[rec.transaction?.categoryId]?.type?.toLowerCase() === "expense"
+  );
+
+  const totalIncomeAmount = totalIncomeTransactions.reduce(
+    (sum, rec) => sum + (rec.transaction?.amount || 0),
+    0
+  );
+
+  const totalExpenseAmount = totalExpenseTransactions.reduce(
+    (sum, rec) => sum + (rec.transaction?.amount || 0),
+    0
+  );
+
+  const nextIncome = [...totalIncomeTransactions]
+    .map((rec) => ({
+      ...rec,
+      nextDateString: getNextRecurringDate(
+        rec.periodic.startDate,
+        rec.periodic.frequency
+      ),
+      nextDate: new Date(
+        getNextRecurringDate(rec.periodic.startDate, rec.periodic.frequency)
+      ),
+    }))
+    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())[0];
+
+  const nextExpense = [...totalExpenseTransactions]
+    .map((rec) => ({
+      ...rec,
+      nextDateString: getNextRecurringDate(
+        rec.periodic.startDate,
+        rec.periodic.frequency
+      ),
+      nextDate: new Date(
+        getNextRecurringDate(rec.periodic.startDate, rec.periodic.frequency)
+      ),
+    }))
+    .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime())[0];
 
   return (
     <div className="container py-6">
@@ -157,41 +307,48 @@ export default function RecurringTransactionsPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Monthly Recurring</CardTitle>
-              <CardDescription>Total recurring transactions</CardDescription>
+              <CardTitle>Total Recurring</CardTitle>
+              <CardDescription>All recurring transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{totalRecurring}</div>
               <p className="text-xs text-muted-foreground mt-2">
-                8 expenses, 4 income
+                {totalExpenseTransactions.length} expenses,{" "}
+                {totalIncomeTransactions.length} income
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Monthly Outflow</CardTitle>
-              <CardDescription>Recurring expenses</CardDescription>
+              <CardTitle>Total Outflow</CardTitle>
+              <CardDescription>All recurring expenses</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                -$2,345.00
+                -${totalExpenseAmount.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Next: Rent ($1,200) on July 1
+                {nextExpense
+                  ? `Next: ${nextExpense.transaction?.description} ($${nextExpense.transaction?.amount}) on ${nextExpense.nextDateString}`
+                  : "No upcoming expense"}
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Monthly Inflow</CardTitle>
-              <CardDescription>Recurring income</CardDescription>
+              <CardTitle>Total Inflow</CardTitle>
+              <CardDescription>All recurring income</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                +$5,800.00
+                +${totalIncomeAmount.toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Next: Salary ($4,500) on June 30
+                {nextIncome
+                  ? `Next: ${nextIncome.transaction?.description} ($${nextIncome.transaction?.amount}) on ${nextIncome.nextDateString}`
+                  : "No upcoming income"}
               </p>
             </CardContent>
           </Card>
@@ -467,28 +624,10 @@ export default function RecurringTransactionsPage() {
               <Label htmlFor="transaction-name">Transaction Name</Label>
               <Input
                 id="transaction-name"
+                value={formData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
                 placeholder="e.g. Rent, Salary, Netflix, etc."
               />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Transaction Type</Label>
-              <RadioGroup defaultValue="expense" className="flex gap-4">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="expense" id="expense" />
-                  <Label htmlFor="expense" className="flex items-center">
-                    <ArrowUp className="mr-2 h-4 w-4 text-destructive" />
-                    Expense
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="income" id="income" />
-                  <Label htmlFor="income" className="flex items-center">
-                    <ArrowDown className="mr-2 h-4 w-4 text-green-600" />
-                    Income
-                  </Label>
-                </div>
-              </RadioGroup>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -498,41 +637,73 @@ export default function RecurringTransactionsPage() {
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
                     $
                   </span>
-                  <Input id="amount" placeholder="0.00" className="pl-7" />
+                  <Input
+                    id="amount"
+                    value={formData.amount}
+                    onChange={(e) => handleChange("amount", e.target.value)}
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
                 </div>
               </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
-                <Select>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(val) => handleChange("categoryId", val)}
+                >
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="housing">Housing</SelectItem>
-                    <SelectItem value="utilities">Utilities</SelectItem>
-                    <SelectItem value="entertainment">Entertainment</SelectItem>
-                    <SelectItem value="health">Health & Fitness</SelectItem>
-                    <SelectItem value="insurance">Insurance</SelectItem>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="investment">Investment</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {Object.entries(categories)
+                      .filter(([, cat]) => cat.name.toLowerCase() !== "save")
+                      .map(([id, cat]) => (
+                        <SelectItem key={id} value={id}>
+                          {cat.name} ({cat.type.toLowerCase()})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="budget">Budget</Label>
+              <Select
+                value={formData.budgetId}
+                onValueChange={(val) => handleChange("budgetId", val)}
+              >
+                <SelectTrigger id="budget">
+                  <SelectValue placeholder="Select budget" />
+                </SelectTrigger>
+                <SelectContent>
+                  {budgets.map((budget) => (
+                    <SelectItem
+                      key={budget.budgetId}
+                      value={String(budget.budgetId)}
+                    >
+                      {budget.categoryName || "Unnamed"} - {budget.period} - $
+                      {budget.amount}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="frequency">Frequency</Label>
-              <Select>
+              <Select
+                value={formData.frequency}
+                onValueChange={(val) => handleChange("frequency", val)}
+              >
                 <SelectTrigger id="frequency">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
                   <SelectItem value="yearly">Yearly</SelectItem>
                 </SelectContent>
               </Select>
@@ -541,28 +712,47 @@ export default function RecurringTransactionsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="start-date">Start Date</Label>
-                <Input id="start-date" type="date" />
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => handleChange("startDate", e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="end-date">End Date (Optional)</Label>
-                <Input id="end-date" type="date" />
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => handleChange("endDate", e.target.value)}
+                />
               </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="account">Account</Label>
-              <Select>
+              <Select
+                value={formData.accountId}
+                onValueChange={(val) => handleChange("accountId", val)}
+              >
                 <SelectTrigger id="account">
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="checking">Checking Account</SelectItem>
-                  <SelectItem value="savings">Savings Account</SelectItem>
-                  <SelectItem value="credit">Credit Card</SelectItem>
+                  {accounts.map((acc) => (
+                    <SelectItem
+                      key={acc.accountId}
+                      value={String(acc.accountId)}
+                    >
+                      {acc.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -570,180 +760,8 @@ export default function RecurringTransactionsPage() {
             >
               Cancel
             </Button>
-            <Button onClick={() => setShowAddRecurringDialog(false)}>
+            <Button onClick={handleAddRecurringTransaction}>
               Add Recurring Transaction
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Projection Dialog */}
-      <Dialog
-        open={showProjectionDialog}
-        onOpenChange={setShowProjectionDialog}
-      >
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>Cash Flow Projections</DialogTitle>
-            <DialogDescription>
-              View your projected account balances based on recurring
-              transactions.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">Projection Period</h3>
-                <p className="text-xs text-muted-foreground">
-                  June 20 - July 20, 2023
-                </p>
-              </div>
-              <Select defaultValue="30">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">Next 7 days</SelectItem>
-                  <SelectItem value="30">Next 30 days</SelectItem>
-                  <SelectItem value="90">Next 90 days</SelectItem>
-                  <SelectItem value="180">Next 6 months</SelectItem>
-                  <SelectItem value="365">Next 12 months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="rounded-md border">
-              <div className="flex items-center justify-between bg-muted p-4">
-                <div className="grid gap-1">
-                  <h3 className="text-sm font-medium">Checking Account</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Bank of America
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">
-                    Current Balance: $5,240.12
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Projected on July 20: $7,125.13
-                  </p>
-                </div>
-              </div>
-              <div className="p-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">June 23, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Freelance Income</p>
-                        <Badge className="bg-green-100 text-green-800">
-                          +$250.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$5,490.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">June 30, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Salary</p>
-                        <Badge className="bg-green-100 text-green-800">
-                          +$4,500.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$9,990.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">July 1, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Rent</p>
-                        <Badge className="bg-red-100 text-red-800">
-                          -$1,200.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$8,790.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">July 1, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Rental Income</p>
-                        <Badge className="bg-green-100 text-green-800">
-                          +$800.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$9,590.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">July 5, 2023</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm">Gym Membership</p>
-                        <Badge className="bg-red-100 text-red-800">
-                          -$50.00
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium">$9,540.12</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      ... and 8 more transactions
-                    </p>
-                    <Button variant="outline" size="sm">
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Refresh Projection
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium">Projected Net Cash Flow</h3>
-                <p className="text-xs text-muted-foreground">
-                  For the selected period
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-green-600">+$1,885.01</p>
-                <p className="text-xs text-muted-foreground">
-                  $5,870.00 income, $3,984.99 expenses
-                </p>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowProjectionDialog(false)}
-            >
-              Close
-            </Button>
-            <Button>
-              <CreditCard className="mr-2 h-4 w-4" />
-              View All Accounts
             </Button>
           </DialogFooter>
         </DialogContent>
